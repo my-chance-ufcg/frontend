@@ -1,68 +1,40 @@
 import streamlit as st
 
-# Configuração inicial da página
-st.set_page_config(page_title="My Chance | Bem-vindo", page_icon="🎯", layout="centered")
+st.set_page_config(page_title="My Chance", layout="centered")
 
-# Estilo para tirar o menu padrão do Streamlit
-st.markdown("""
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    </style>
-    """, unsafe_allow_html=True)
+if "user_role" not in st.session_state:
+    st.session_state.user_role = None
 
-# Título e Subtítulo
-st.title("My Chance")
-st.markdown("Onde seu perfil profissional é o mais importante")
-st.write("---")
+# Mapeamento
 
-# Criação das abas de navegação
-tab_candidato, tab_recrutador = st.tabs(["Sou Candidato", "Sou Recrutador"])
+# Antes de fazer login
+page_login = st.Page("src/views/common/login.py", title="Fazer Login")
+page_registro = st.Page("src/views/common/registro.py", title="Criar Conta")
 
-# Fluxo do candidato
-with tab_candidato:
-    st.subheader("Acesso do Candidato")
-    
-    # Campos de input
-    email_cand = st.text_input("E-mail / Usuário", placeholder="seu-email@exemplo.com", key="cand_email")
-    senha_cand = st.text_input("Senha", type="password", key="cand_pass")
-    
-    # Botão de Login
-    if st.button("Entrar", key="btn_cand", type="primary", use_container_width=True):
-        if email_cand and senha_cand:
-            st.success("Autenticação bem-sucedida! Redirecionando para o seu currículo anônimo...")
-            # Aqui entrará a lógica de redirecionamento no futuro
-        else:
-            st.error("Preencha todos os campos.")
+# Candidato
+page_dashboard_cand = st.Page("src/views/candidato/dashboard_candidato.py", title="Painel do Candidato")
+page_cv = st.Page("src/views/candidato/cadastro_cv.py", title="Editar Meu Currículo")
 
-    # Links de rodapé
-    st.markdown("""
-        <div style='text-align: center; margin-top: 15px;'>
-            <a href='#' style='text-decoration: none; color: #2E5BFF;'>Esqueci minha senha</a><br>
-            <a href='#' style='text-decoration: none; color: #2E5BFF;'>Não tem cadastro? Crie seu perfil</a>
-        </div>
-    """, unsafe_allow_html=True)
+# Recrutador
+page_dashboard_rec = st.Page("src/views/recrutador/dashboard_recrutador.py", title="Painel do Recrutador")
+page_vagas = st.Page("src/views/recrutador/criar_vaga.py", title="Criar Nova Vaga")
 
-# Fluxo do recrutador
-with tab_recrutador:
-    st.subheader("Acesso do Recrutador")
-    
-    # Campos de input
-    email_rec = st.text_input("E-mail corporativo / Usuário", placeholder="seu-email@empresa.com.br", key="rec_email")
-    senha_rec = st.text_input("Senha", type="password", key="rec_pass")
-    
-    # Botão de Login
-    if st.button("Entrar", key="btn_rec", type="primary", use_container_width=True):
-        if email_rec and senha_rec:
-            st.success("Autenticação bem-sucedida! Carregando talentos recomendados...")
-            # Colocar lógica de redirecionamento!
-        else:
-            st.error("Preencha todos os campos corretamente.")
-            
-    # Links de rodapé
-    st.markdown("""
-        <div style='text-align: center; margin-top: 15px;'>
-            <a href='#' style='text-decoration: none; color: #2E5BFF;'>Esqueci minha senha</a><br>
-            <a href='#' style='text-decoration: none; color: #2E5BFF;'>Não tem cadastro? Crie sua conta corporativa</a>
-        </div>
-    """, unsafe_allow_html=True)
+
+# Lógica de Roteamento
+if st.session_state.user_role == "Candidato":
+    pg = st.navigation([page_dashboard_cand, page_cv]) 
+elif st.session_state.user_role == "Recrutador":
+    pg = st.navigation([page_dashboard_rec, page_vagas])
+else:
+    pg = st.navigation([page_login, page_registro])
+
+pg.run()
+
+# Botão para sair
+if st.session_state.user_role is not None:
+    with st.sidebar:
+        st.markdown("<div style='height: 50vh;'></div>", unsafe_allow_html=True)
+        st.write("---") 
+        if st.button("Sair", use_container_width=True):
+            st.session_state.user_role = None
+            st.rerun()
