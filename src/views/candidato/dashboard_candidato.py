@@ -1,62 +1,62 @@
 import streamlit as st
 
+from src.domain.catalog import INVITE_STATUS_LABELS
+from src.services.api_client import ApiError, accept_invite, list_candidate_invites, reject_invite
+
 st.title("Painel do Candidato")
 
-# Resumo do Perfil
-st.metric(label="Status do Perfil", value="Ativo / Anônimo", help="Seu perfil está visível para recrutadores de forma anonimizada.")
+candidato_id = st.session_state.get("candidato_id")
+if not candidato_id:
+    st.warning("Cadastre seu perfil anonimizado na página **Editar Meu Currículo** antes de gerenciar convites.")
+    st.stop()
+
+st.metric(label="Status do Perfil", value="Ativo / Anônimo")
+st.caption(f"ID anônimo: `{candidato_id}`")
 st.write("---")
 
-# Gestão de Convites
 st.subheader("Convites para Entrevista")
-st.markdown("Recrutadores demonstraram interesse no seu perfil. Avalie as propostas abaixo:")
 
-# Mock de Convites Recebidos
-if 'convites' not in st.session_state:
-    st.session_state.convites = [
-        {
-            "id": 1,
-            "empresa_id": "Empresa A", 
-            "cargo": "Desenvolvedor Python Júnior",
-            "salario_oferecido": 5500.00,
-            "descricao_vaga": "Atuação em projetos de análise de dados e automação de processos industriais.",
-            "requisitos": "Python, SQL, Docker",
-            "status": "pendente"
-        },
-        {
-            "id": 2,
-            "empresa_id": "Empresa B",
-            "cargo": "Desenvolvedor Front-end Pleno",
-            "salario_oferecido": 7200.00,
-            "descricao_vaga": "Desenvolvimento de interfaces modernas para plataforma de E-commerce internacional.",
-            "requisitos": "React, TypeScript, Tailwind CSS",
-            "status": "pendente"
-        }
-    ]
+try:
+    convites = list_candidate_invites(candidato_id)
+except ApiError as error:
+    st.error(f"Não foi possível carregar convites: {error}")
+    st.stop()
 
-# Cards de Convite
-convites_pendentes = [c for c in st.session_state.convites if c["status"] == "pendente"]
+pendentes = [item for item in convites if item["status"] == "ENVIADO"]
 
-if len(convites_pendentes) > 0:
-    for convite in convites_pendentes:
-        with st.container(border=True):
-            st.markdown(f"### Proposta para: **{convite['cargo']}**")
-            st.markdown(f"**Salário Oferecido:** R$ {convite['salario_oferecido']:,.2f}")
-            
-            with st.expander("Ver detalhes da oportunidade"):
-                st.write(f"**Sobre a vaga:** {convite['descricao_vaga']}")
-                st.write(f"**Requisitos esperados:** {convite['requisitos']}")
-                st.info("Ao autorizar, seu nome, e-mail e currículo completo serão revelados para esta empresa.")
-
-            col_aut, col_rec = st.columns(2)
-            with col_aut:
-                if st.button("Autorizar Revelação de Dados", key=f"aut_{convite['id']}", use_container_width=True, type="primary"):
-                    convite["status"] = "autorizado"
-                    st.toast("Identidade revelada! Boa sorte na sua entrevista!")
-                    st.rerun()
-            with col_rec:
-                if st.button("Recusar Proposta", key=f"rec_{convite['id']}", use_container_width=True):
-                    convite["status"] = "recusado"
-                    st.toast("Proposta removida da sua lista.")
-                    st.rerun()
+if not pendentes:
+    st.info("Nenhum convite pendente no momento.")
 else:
-    st.info("Você ainda não possui novos convites. Continue aprimorando seu currículo para atrair mais recrutadores!")
+    for convite in pendentes:
+        with st.container(border=True):
+            st.markdown(f"### {convite['titulo_vaga']}")
+            st.markdown(f"**Status:** {INVITE_STATUS_LABELS.get(convite['status'], convite['status'])}")
+            if convite.get("mensagem"):
+                st.write(convite["mensagem"])
+            st.info("Ao autorizar, seus dados pessoais poderão ser revelados ao recrutador.")
+
+            col_aceitar, col_recusar = st.columns(2)
+            with col_aceitar:
+                if st.button("Autorizar Revelação de Dados", key=f"accept_{convite['convite_id']}", use_container_width=True):
+                    try:
+                        accept_invite(convite["convite_id"])
+                        st.toast("Convite aceito!")
+                        st.rerun()
+                    except ApiError as error:
+                        st.error(str(error))
+            with col_recusar:
+                if st.button("Recusar Proposta", key=f"reject_{convite['convite_id']}", use_container_width=True):
+                    try:
+                        reject_invite(convite["convite_id"])
+                        st.toast("Convite recusado.")
+                        st.rerun()
+                    except ApiError as error:
+                        st.error(str(error))
+
+if convites:
+    with st.expander("Histórico de convites"):
+        for convite in convites:
+            st.markdown(
+                f"- **{convite['titulo_vaga']}** — "
+                f"{INVITE_STATUS_LABELS.get(convite['status'], convite['status'])}"
+            )
