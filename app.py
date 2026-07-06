@@ -4,6 +4,10 @@ st.set_page_config(page_title="My Chance", layout="centered")
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
+if "candidato_id" not in st.session_state:
+    st.session_state.candidato_id = None
+if "vaga_id" not in st.session_state:
+    st.session_state.vaga_id = None
 
 # Mapeamento
 
