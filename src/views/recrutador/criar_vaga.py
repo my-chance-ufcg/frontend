@@ -1,7 +1,7 @@
 import streamlit as st
 
 from src.domain.catalog import SKILL_OPTIONS, label_to_skill_key
-from src.services.api_client import ApiError, create_job, default_recruiter_id, get_recommendations
+from src.services.api_client import ApiError, create_job, get_recommendations
 
 st.title("Cadastro de Nova Vaga")
 st.markdown("Preencha os dados da vaga conforme o contrato da API do My Chance.")
@@ -70,7 +70,6 @@ if st.button("Criar Vaga e Buscar Candidatos", type="primary", use_container_wid
     else:
         payload = {
             "titulo": titulo_vaga.strip(),
-            "recrutador_id": default_recruiter_id(),
             "descricao": descricao_vaga.strip() or None,
             "salario_maximo": int(salario_maximo),
             "requisitos": requisitos,
@@ -81,18 +80,25 @@ if st.button("Criar Vaga e Buscar Candidatos", type="primary", use_container_wid
             st.session_state.vaga_id = created["vaga_id"]
             st.success(f"Vaga criada: `{created['vaga_id']}`")
 
-            recommendations = get_recommendations(created["vaga_id"])
-            st.session_state.recommendations = recommendations
+            try:
+                recommendations = get_recommendations(created["vaga_id"])
+                st.session_state.recommendations = recommendations
 
-            if recommendations:
-                st.subheader("Candidatos sugeridos (motor NLP)")
-                for item in recommendations:
-                    score_pct = round(item["compatibilidade_score"] * 100, 1)
-                    st.markdown(
-                        f"**{item['candidato_id']}** — "
-                        f"**{item['compatibilidade']}** ({score_pct}%)"
-                    )
-            else:
-                st.info("Nenhum candidato compatível encontrado no momento.")
+                if recommendations:
+                    st.subheader("Candidatos sugeridos (motor NLP)")
+                    for item in recommendations:
+                        score_pct = round(item["compatibilidade_score"] * 100, 1)
+                        posicao = item.get("posicao", "?")
+                        st.markdown(
+                            f"**#{posicao} {item['candidato_id']}** — "
+                            f"**{item['compatibilidade']}** ({score_pct}%)"
+                        )
+                else:
+                    st.info("Nenhum candidato compatível encontrado no momento.")
+            except ApiError as nlp_error:
+                st.warning(
+                    f"Vaga criada, mas não foi possível buscar candidatos agora: {nlp_error}. "
+                    "Tente novamente no **Painel do Recrutador**."
+                )
         except ApiError as error:
-            st.error(f"Erro ao criar vaga ou buscar candidatos: {error}")
+            st.error(f"Erro ao criar vaga: {error}")

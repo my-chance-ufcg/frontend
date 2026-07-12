@@ -1,21 +1,26 @@
 import streamlit as st
-import time
+
+from src.services.api_client import ApiError, register as api_register
+from src.services.auth_session import apply_auth_session
+
+ROLE_MAP = {
+    "Candidato": "CANDIDATE",
+    "Recrutador": "RECRUITER",
+}
 
 st.title("Criar Nova Conta")
 st.markdown("Cadastre-se aqui para poder usar a plataforma.")
 
 st.write("---")
 
-# Tipo de Perfil
 tipo_conta = st.radio(
     "Eu quero me cadastrar como:",
     ["Candidato", "Recrutador"],
-    index=0
+    index=0,
 )
 
 st.write("---")
 
-# Formulário de Dados
 nome = st.text_input("Nome Completo")
 email = st.text_input("E-mail")
 
@@ -27,23 +32,31 @@ with col2:
 
 st.write("")
 
-# Cadastro
 if st.button("Criar Conta", type="primary", use_container_width=True):
     if not nome or not email or not senha or not confirmar_senha:
         st.error("Por favor, preencha todos os campos para continuar.")
     elif senha != confirmar_senha:
         st.error("As senhas não coincidem. Tente novamente.")
+    elif len(senha) < 6:
+        st.error("A senha deve ter pelo menos 6 caracteres.")
     else:
-        # POST (INSERT) no banco de dados
-        st.success(f"Conta criada com sucesso, {nome.split()[0]}! Redirecionando para o login...")
-        time.sleep(2)
-        st.switch_page("src/views/common/login.py")
+        try:
+            auth_response = api_register(
+                {
+                    "nome": nome.strip(),
+                    "email": email.strip(),
+                    "senha": senha,
+                    "role": ROLE_MAP[tipo_conta],
+                }
+            )
+            apply_auth_session(auth_response)
+            st.success(f"Conta criada com sucesso, {nome.split()[0]}!")
+            st.rerun()
+        except ApiError as error:
+            st.error(f"Não foi possível criar a conta: {error}")
 
 st.write("---")
 
-# Atalho para quem já tem conta
 st.markdown("<p style='text-align: center;'>Já possui uma conta?</p>", unsafe_allow_html=True)
 if st.button("Voltar para o Login", use_container_width=True):
     st.switch_page("src/views/common/login.py")
-                
-

@@ -7,7 +7,7 @@ from src.domain.catalog import (
     SKILL_OPTIONS,
     label_to_skill_key,
 )
-from src.services.api_client import ApiError, create_profile, update_profile
+from src.services.api_client import ApiError, create_profile, get_my_profile, update_profile
 
 st.title("Cadastro de Perfil Profissional")
 
@@ -132,14 +132,22 @@ if st.button("Finalizar e Publicar Perfil Anônimo", type="primary", use_contain
 
         try:
             if st.session_state.get("candidato_id"):
-                result = update_profile(st.session_state.candidato_id, payload)
+                result = update_profile(payload)
             else:
                 result = create_profile(payload)
                 st.session_state.candidato_id = result["candidato_id"]
 
+            st.session_state.candidato_id = result["candidato_id"]
             st.success(f"✅ Perfil salvo. ID anônimo: `{result['candidato_id']}`")
         except ApiError as error:
             st.error(f"Não foi possível salvar o perfil: {error}")
 
 if st.session_state.get("candidato_id"):
     st.info(f"Perfil ativo: `{st.session_state.candidato_id}`")
+elif st.session_state.get("auth_token"):
+    try:
+        profile = get_my_profile()
+        st.session_state.candidato_id = profile["candidato_id"]
+        st.info(f"Perfil ativo: `{profile['candidato_id']}`")
+    except ApiError:
+        pass
