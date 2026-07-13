@@ -77,6 +77,10 @@ INVITE_STATUS_LABELS = {
 }
 
 
+def skill_key_to_label(key: str) -> str:
+    return SKILL_LABELS.get(key, key)
+
+
 def label_to_skill_key(label: str) -> str:
     for item in SKILLS:
         if item["label"] == label:

@@ -1,5 +1,6 @@
 import streamlit as st
 
+from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, login as api_login
 from src.services.auth_session import apply_auth_session
 
@@ -18,7 +19,7 @@ tab_candidato, tab_recrutador = st.tabs(["Sou Candidato", "Sou Recrutador"])
 
 with tab_candidato:
     st.subheader("Acesso do Candidato")
-    email_cand = st.text_input("E-mail / Usuário", placeholder="seu-email@exemplo.com", key="cand_email")
+    email_cand = st.text_input("E-mail", placeholder="seu-email@exemplo.com", key="cand_email")
     senha_cand = st.text_input("Senha", type="password", key="cand_pass")
 
     if st.button("Entrar", key="btn_cand", type="primary", use_container_width=True):
@@ -33,13 +34,13 @@ with tab_candidato:
                 else:
                     st.rerun()
             except ApiError as error:
-                st.error(f"Não foi possível entrar: {error}")
+                st.error(friendly_error(error, "Não foi possível entrar. Verifique e-mail e senha."))
         else:
             st.error("Preencha todos os campos.")
 
 with tab_recrutador:
     st.subheader("Acesso do Recrutador")
-    email_rec = st.text_input("E-mail corporativo / Usuário", placeholder="seu-email@empresa.com.br", key="rec_email")
+    email_rec = st.text_input("E-mail corporativo", placeholder="seu-email@empresa.com.br", key="rec_email")
     senha_rec = st.text_input("Senha", type="password", key="rec_pass")
 
     if st.button("Entrar", key="btn_rec", type="primary", use_container_width=True):
@@ -54,8 +55,6 @@ with tab_recrutador:
                 else:
                     st.rerun()
             except ApiError as error:
-                st.error(f"Não foi possível entrar: {error}")
+                st.error(friendly_error(error, "Não foi possível entrar. Verifique e-mail e senha."))
         else:
             st.error("Preencha todos os campos.")
-
-st.info("Conta demo de recrutador (Docker/dev): `recruiter@mychance.local` / `recruiter123`")

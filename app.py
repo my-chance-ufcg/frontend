@@ -20,7 +20,7 @@ page_dashboard_cand = st.Page("src/views/candidato/dashboard_candidato.py", titl
 page_cv = st.Page("src/views/candidato/cadastro_cv.py", title="Editar Meu Currículo")
 
 page_dashboard_rec = st.Page("src/views/recrutador/dashboard_recrutador.py", title="Painel do Recrutador")
-page_vagas = st.Page("src/views/recrutador/criar_vaga.py", title="Criar Nova Vaga")
+page_vagas = st.Page("src/views/recrutador/criar_vaga.py", title="Gerenciar Vagas")
 
 if st.session_state.user_role == "Candidato":
     pg = st.navigation([page_dashboard_cand, page_cv])

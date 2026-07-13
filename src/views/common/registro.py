@@ -1,5 +1,6 @@
 import streamlit as st
 
+from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, register as api_register
 from src.services.auth_session import apply_auth_session
 
@@ -53,7 +54,7 @@ if st.button("Criar Conta", type="primary", use_container_width=True):
             st.success(f"Conta criada com sucesso, {nome.split()[0]}!")
             st.rerun()
         except ApiError as error:
-            st.error(f"Não foi possível criar a conta: {error}")
+            st.error(friendly_error(error, "Não foi possível criar a conta. Verifique os dados informados."))
 
 st.write("---")
 

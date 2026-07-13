@@ -5,7 +5,14 @@ from typing import Any
 
 import streamlit as st
 
-from src.services.api_client import ApiError, schedule_interview, send_invite
+from src.domain.invite_status import format_datetime_human, render_job_description, schedule_status_badge
+from src.domain.user_messages import friendly_error
+from src.services.api_client import (
+    ApiError,
+    confirm_schedule,
+    schedule_interview,
+    send_invite,
+)
 
 
 def render_job_selector(jobs: list[dict[str, Any]]) -> str | None:
@@ -33,45 +40,55 @@ def render_job_metrics(
     pending_invites: list[dict[str, Any]],
     confirmed_invites: list[dict[str, Any]],
 ) -> None:
-    col1, col2, col3 = st.columns(3)
+    disponiveis = [item for item in recommendations if item.get("convite_status") != "RECUSADO"]
+    recusados = [item for item in recommendations if item.get("convite_status") == "RECUSADO"]
+
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Sugestões disponíveis", len(recommendations))
+        st.metric("Candidatos disponíveis", len(disponiveis))
     with col2:
-        st.metric("Aguardando resposta", len(pending_invites))
+        st.metric("Recusaram convite", len(recusados))
     with col3:
-        st.metric("Entrevistas confirmadas", len(confirmed_invites))
+        st.metric("Aguardando resposta", len(pending_invites))
+    with col4:
+        fully_confirmed = [
+            item for item in confirmed_invites if item.get("schedule_status") == "CONFIRMED"
+        ]
+        st.metric("Entrevistas confirmadas", len(fully_confirmed))
 
 
-def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) -> None:
-    st.subheader("Perfis anonimizados ranqueados pelo NLP")
-    st.caption(
-        "Candidatos já convidados ou com entrevista confirmada não aparecem aqui — "
-        "consulte as outras abas."
-    )
+def _split_recommendations(
+    recommendations: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    disponiveis = [item for item in recommendations if item.get("convite_status") != "RECUSADO"]
+    recusados = [item for item in recommendations if item.get("convite_status") == "RECUSADO"]
+    return disponiveis, recusados
 
-    if not recommendations:
-        st.info(
-            "Nenhum candidato disponível para convite nesta vaga. "
-            "Isso pode ocorrer quando todos os compatíveis já foram convidados "
-            "ou quando nenhum perfil passa nos filtros de compatibilidade."
-        )
-        return
 
-    for item in recommendations:
-        score_pct = round(item["compatibilidade_score"] * 100, 1)
-        posicao = item.get("posicao", "?")
-        with st.container(border=True):
-            st.markdown(f"#### #{posicao} — {item['candidato_id']}")
-            st.markdown(f"**Compatibilidade:** {item['compatibilidade']} ({score_pct}%)")
-            st.markdown(f"**Skills:** {', '.join(item['competencias_tecnicas'])}")
+def _render_recommendation_card(
+    item: dict[str, Any],
+    *,
+    vaga_id: str | None = None,
+    show_invite_button: bool = True,
+    rejected: bool = False,
+) -> None:
+    score_pct = round(item["compatibilidade_score"] * 100, 1)
+    posicao = item.get("posicao", "?")
+    with st.container(border=True):
+        st.markdown(f"#### #{posicao} — Perfil {item['candidato_id']}")
+        if rejected:
+            st.warning("Este candidato já recusou um convite para esta vaga.")
+        st.markdown(f"**Compatibilidade:** {item['compatibilidade']} ({score_pct}%)")
+        st.markdown(f"**Competências:** {', '.join(item['competencias_tecnicas'])}")
 
-            if item.get("experiencias"):
-                exp_lines = [
-                    f"{exp['cargo']} ({exp['tempo_meses']} meses)"
-                    for exp in item["experiencias"]
-                ]
-                st.markdown(f"**Experiências:** {', '.join(exp_lines)}")
+        if item.get("experiencias"):
+            exp_lines = [
+                f"{exp['cargo']} ({exp['tempo_meses']} meses)"
+                for exp in item["experiencias"]
+            ]
+            st.markdown(f"**Experiências:** {', '.join(exp_lines)}")
 
+        if show_invite_button and vaga_id:
             if st.button(
                 "Enviar convite de entrevista",
                 key=f"invite_{vaga_id}_{item['candidato_id']}",
@@ -80,12 +97,42 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
                     send_invite(
                         vaga_id,
                         item["candidato_id"],
-                        "Gostaríamos de agendar uma entrevista com base no seu perfil técnico.",
+                        "Gostaríamos de agendar uma entrevista com você.",
                     )
-                    st.toast("Convite enviado! O candidato foi movido para Aguardando Resposta.")
+                    st.toast("Convite enviado! Acompanhe em **Aguardando resposta**.")
                     st.rerun()
                 except ApiError as error:
-                    st.error(str(error))
+                    st.error(friendly_error(error, "Não foi possível enviar o convite."))
+
+
+def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) -> None:
+    st.subheader("Candidatos compatíveis")
+    st.caption(
+        "Ordenados por aderência à vaga. Quem já tem convite pendente ou entrevista marcada "
+        "não aparece aqui. Candidatos que recusaram permanecem listados apenas para referência."
+    )
+
+    if not recommendations:
+        st.info(
+            "Nenhum candidato disponível para convite nesta vaga no momento. "
+            "Todos os perfis compatíveis já podem ter sido convidados, ou ainda não há candidatos adequados."
+        )
+        return
+
+    disponiveis, recusados = _split_recommendations(recommendations)
+
+    if disponiveis:
+        st.markdown("#### Disponíveis para convite")
+        for item in disponiveis:
+            _render_recommendation_card(item, vaga_id=vaga_id)
+    else:
+        st.info("Nenhum candidato disponível para novo convite nesta vaga.")
+
+    if recusados:
+        st.markdown("#### Recusaram convite anteriormente")
+        st.caption("Estes candidatos recusaram esta vaga e não podem receber novo convite.")
+        for item in recusados:
+            _render_recommendation_card(item, rejected=True, show_invite_button=False)
 
 
 def render_pending_tab(pending_invites: list[dict[str, Any]]) -> None:
@@ -95,18 +142,19 @@ def render_pending_tab(pending_invites: list[dict[str, Any]]) -> None:
 
     for invite in pending_invites:
         with st.container(border=True):
-            st.markdown(f"**Candidato:** `{invite['candidato_id']}`")
+            st.markdown(f"**Perfil:** {invite['candidato_id']}")
             st.markdown(f"**Vaga:** {invite['titulo_vaga']}")
+            render_job_description(invite)
             if invite.get("mensagem"):
                 st.write(invite["mensagem"])
-            st.caption("Dados pessoais ocultos até o candidato autorizar a revelação.")
+            st.caption("Os dados de contato ficam ocultos até o candidato aceitar o convite.")
 
 
 def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
     st.caption(
-        "Após o aceite mútuo, os dados pessoais são revelados. "
-        "A entrevista ocorre fora da plataforma — use o agendamento abaixo "
-        "para registrar horário e link (ex.: Google Meet)."
+        "Depois que o candidato aceita, você vê nome e e-mail. "
+        "Proponha data, horário e link da reunião — a entrevista só fica confirmada "
+        "quando os dois concordarem."
     )
 
     if not confirmed_invites:
@@ -115,44 +163,74 @@ def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
 
     for invite in confirmed_invites:
         with st.container(border=True):
-            st.markdown(f"**ID anônimo:** `{invite['candidato_id']}`")
+            st.markdown(f"**Perfil:** {invite['candidato_id']}")
             st.markdown(f"**Vaga:** {invite['titulo_vaga']}")
-            st.success("Candidato autorizou revelação de dados.")
+            render_job_description(invite)
+
+            badge = schedule_status_badge(invite, perspective="recruiter")
+            if invite.get("schedule_status") == "CONFIRMED":
+                st.success(badge)
+            elif badge:
+                st.info(badge)
+            else:
+                st.success("Candidato aceitou o convite.")
 
             if invite.get("candidato_nome"):
-                st.markdown("#### Dados revelados")
+                st.markdown("#### Contato do candidato")
                 st.markdown(f"**Nome:** {invite['candidato_nome']}")
                 st.markdown(f"**E-mail:** [{invite['candidato_email']}](mailto:{invite['candidato_email']})")
 
-            _render_schedule_form(invite)
+            _render_schedule_section(invite)
 
 
-def _render_schedule_form(invite: dict[str, Any]) -> None:
+def _render_schedule_section(invite: dict[str, Any]) -> None:
     invite_id = invite["convite_id"]
+    schedule_status = invite.get("schedule_status")
     existing_at = invite.get("proposed_interview_at")
     existing_link = invite.get("meeting_link") or ""
 
     if existing_at:
-        st.info(f"Horário proposto: **{existing_at}**")
+        st.markdown(f"**Horário proposto:** {format_datetime_human(existing_at)}")
     if existing_link:
         st.markdown(f"**Link da reunião:** [{existing_link}]({existing_link})")
 
-    with st.expander("Agendar entrevista", expanded=not existing_at):
-        with st.form(key=f"schedule_{invite_id}"):
-            interview_date = st.date_input("Data", value=date.today(), key=f"date_{invite_id}")
-            interview_time = st.time_input("Horário", value=time(hour=10, minute=0), key=f"time_{invite_id}")
-            meet_link = st.text_input(
-                "Link Google Meet (opcional)",
-                value=existing_link,
-                placeholder="https://meet.google.com/...",
-                key=f"meet_{invite_id}",
-            )
+    if schedule_status == "PROPOSED_BY_CANDIDATE":
+        if st.button("Confirmar horário proposto pelo candidato", key=f"confirm_{invite_id}"):
+            try:
+                confirm_schedule(invite_id)
+                st.toast("Entrevista confirmada!")
+                st.rerun()
+            except ApiError as error:
+                st.error(friendly_error(error, "Não foi possível confirmar o horário."))
 
-            if st.form_submit_button("Salvar agendamento"):
-                proposed = datetime.combine(interview_date, interview_time).isoformat() + "Z"
-                try:
-                    schedule_interview(invite_id, proposed, meet_link or None)
-                    st.toast("Agendamento salvo!")
-                    st.rerun()
-                except ApiError as error:
-                    st.error(str(error))
+    can_propose = schedule_status in (
+        "AWAITING_SCHEDULE",
+        "PROPOSED_BY_CANDIDATE",
+        "PROPOSED_BY_RECRUITER",
+        None,
+    )
+    if schedule_status != "CONFIRMED" and can_propose:
+        with st.expander(
+            "Propor ou atualizar agendamento",
+            expanded=schedule_status in ("AWAITING_SCHEDULE", "PROPOSED_BY_CANDIDATE", None),
+        ):
+            with st.form(key=f"schedule_{invite_id}"):
+                interview_date = st.date_input("Data", value=date.today(), key=f"date_{invite_id}")
+                interview_time = st.time_input(
+                    "Horário", value=time(hour=10, minute=0), key=f"time_{invite_id}"
+                )
+                meet_link = st.text_input(
+                    "Link Google Meet (opcional)",
+                    value=existing_link,
+                    placeholder="https://meet.google.com/...",
+                    key=f"meet_{invite_id}",
+                )
+
+                if st.form_submit_button("Enviar proposta de horário"):
+                    proposed = datetime.combine(interview_date, interview_time).isoformat() + "Z"
+                    try:
+                        schedule_interview(invite_id, proposed, meet_link or None)
+                        st.toast("Proposta enviada ao candidato!")
+                        st.rerun()
+                    except ApiError as error:
+                        st.error(friendly_error(error, "Não foi possível enviar a proposta de horário."))

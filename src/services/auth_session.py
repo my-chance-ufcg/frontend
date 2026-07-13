@@ -21,3 +21,4 @@ def clear_auth_session() -> None:
     st.session_state.user_role = None
     st.session_state.candidato_id = None
     st.session_state.vaga_id = None
+    st.session_state.pop("cv_save_feedback", None)

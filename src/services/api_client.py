@@ -178,3 +178,46 @@ def schedule_interview(invite_id: str, proposed_at: str, meeting_link: str | Non
         timeout=20,
     )
     return _handle_response(response)
+
+
+def confirm_schedule(invite_id: str) -> dict[str, Any]:
+    response = requests.post(
+        f"{API_BASE_URL}/api/v1/invites/{invite_id}/schedule/confirm",
+        headers=_auth_headers(),
+        timeout=20,
+    )
+    return _handle_response(response)
+
+
+def counter_propose_schedule(
+    invite_id: str, proposed_at: str, meeting_link: str | None
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"proposed_interview_at": proposed_at}
+    if meeting_link:
+        payload["meeting_link"] = meeting_link
+    response = requests.post(
+        f"{API_BASE_URL}/api/v1/invites/{invite_id}/schedule/counter-propose",
+        json=payload,
+        headers=_auth_headers(),
+        timeout=20,
+    )
+    return _handle_response(response)
+
+
+def get_job(job_id: str) -> dict[str, Any]:
+    response = requests.get(
+        f"{API_BASE_URL}/api/v1/jobs/{job_id}",
+        headers=_auth_headers(),
+        timeout=20,
+    )
+    return _handle_response(response)
+
+
+def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    response = requests.put(
+        f"{API_BASE_URL}/api/v1/jobs/{job_id}",
+        json=payload,
+        headers=_auth_headers(),
+        timeout=20,
+    )
+    return _handle_response(response)
