@@ -60,14 +60,12 @@ def _render_save_feedback() -> None:
 
     if feedback.get("kind") == "created":
         st.success(
-            "✅ Seu perfil foi publicado com sucesso! "
+            "Seu perfil foi publicado com sucesso! "
             "Agora você pode receber convites de entrevista no **Painel do Candidato**."
         )
     else:
-        st.success("✅ Seu currículo foi atualizado com sucesso.")
+        st.success("Seu currículo foi atualizado com sucesso.")
 
-
-_render_save_feedback()
 
 st.title("Meu Currículo")
 
@@ -239,3 +237,5 @@ if st.button(button_label, type="primary", use_container_width=True):
             st.rerun()
         except ApiError as error:
             st.error(friendly_error(error, "Não foi possível salvar seu perfil. Tente novamente."))
+
+_render_save_feedback()

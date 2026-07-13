@@ -109,6 +109,37 @@ def _render_requirement_fields(job_form: dict | None, form_scope: str) -> list[d
     return result
 
 
+def _render_job_save_feedback() -> None:
+    feedback = st.session_state.get("job_save_feedback")
+    if not feedback:
+        return
+
+    if feedback.get("kind") == "created":
+        st.success("Vaga criada com sucesso!")
+    else:
+        st.success("Vaga atualizada com sucesso!")
+
+    if feedback.get("recommendations_warning"):
+        st.warning(
+            "Vaga criada, mas não foi possível carregar candidatos sugeridos agora. "
+            "Confira no **Painel do Recrutador**."
+        )
+        return
+
+    recommendations = feedback.get("recommendations") or []
+    if recommendations:
+        st.subheader("Candidatos sugeridos")
+        for item in recommendations:
+            score_pct = round(item["compatibilidade_score"] * 100, 1)
+            posicao = item.get("posicao", "?")
+            st.markdown(
+                f"**#{posicao} Perfil {item['candidato_id']}** — "
+                f"**{item['compatibilidade']}** ({score_pct}%)"
+            )
+    elif feedback.get("kind") == "created":
+        st.info("Nenhum candidato compatível encontrado no momento.")
+
+
 st.title("Gerenciar Vagas")
 
 modo = st.radio("Ação", ["Criar nova vaga", "Editar vaga existente"], horizontal=True)
@@ -205,30 +236,19 @@ if st.button(submit_label, type="primary", use_container_width=True):
                 st.session_state._job_form = job
                 st.session_state._job_loaded_id = editing_job_id
                 _sync_requirement_widget_state(editing_job_id, job)
-                st.success("Vaga atualizada com sucesso!")
+                st.session_state.job_save_feedback = {"kind": "updated"}
             else:
                 created = create_job(payload)
                 st.session_state.vaga_id = created["vaga_id"]
-                st.success("Vaga criada com sucesso!")
-
+                feedback: dict = {"kind": "created"}
                 try:
-                    job_id = st.session_state.vaga_id
-                    recommendations = get_recommendations(job_id)
-                    if recommendations:
-                        st.subheader("Candidatos sugeridos")
-                        for item in recommendations:
-                            score_pct = round(item["compatibilidade_score"] * 100, 1)
-                            posicao = item.get("posicao", "?")
-                            st.markdown(
-                                f"**#{posicao} Perfil {item['candidato_id']}** — "
-                                f"**{item['compatibilidade']}** ({score_pct}%)"
-                            )
-                    else:
-                        st.info("Nenhum candidato compatível encontrado no momento.")
+                    recommendations = get_recommendations(st.session_state.vaga_id)
+                    feedback["recommendations"] = recommendations
                 except ApiError:
-                    st.warning(
-                        "Vaga criada, mas não foi possível carregar candidatos sugeridos agora. "
-                        "Confira no **Painel do Recrutador**."
-                    )
+                    feedback["recommendations_warning"] = True
+                st.session_state.job_save_feedback = feedback
+            st.rerun()
         except ApiError as error:
             st.error(friendly_error(error, "Não foi possível salvar a vaga."))
+
+_render_job_save_feedback()

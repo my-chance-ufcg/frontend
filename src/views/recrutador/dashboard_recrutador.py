@@ -12,6 +12,8 @@ from src.views.recrutador.painel_vaga import (
 
 st.title("Painel do Recrutador")
 
+st.session_state.pop("job_save_feedback", None)
+
 try:
     jobs = list_my_jobs()
 except ApiError as error:
