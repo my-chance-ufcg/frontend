@@ -1,5 +1,6 @@
 import streamlit as st
 
+from src.domain.contact_validation import is_valid_email, is_valid_phone, normalize_email, normalize_phone
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, register as api_register
 from src.services.auth_session import apply_auth_session
@@ -23,7 +24,11 @@ tipo_conta = st.radio(
 st.write("---")
 
 nome = st.text_input("Nome Completo")
-email = st.text_input("E-mail")
+email = st.text_input("E-mail", placeholder="seu-email@exemplo.com")
+telefone = st.text_input(
+    "Telefone",
+    placeholder="(83) 99999-9999",
+)
 
 col1, col2 = st.columns(2)
 with col1:
@@ -34,22 +39,33 @@ with col2:
 st.write("")
 
 if st.button("Criar Conta", type="primary", use_container_width=True):
+    email_normalizado = normalize_email(email)
+    telefone_normalizado = normalize_phone(telefone)
+
     if not nome or not email or not senha or not confirmar_senha:
         st.error("Por favor, preencha todos os campos para continuar.")
+    elif not is_valid_email(email):
+        st.error("Informe um e-mail válido.")
+    elif tipo_conta == "Candidato" and not is_valid_phone(telefone):
+        st.error("Informe um telefone válido com DDD (10 ou 11 dígitos).")
+    elif tipo_conta == "Recrutador" and telefone.strip() and not is_valid_phone(telefone):
+        st.error("Informe um telefone válido com DDD (10 ou 11 dígitos), ou deixe em branco.")
     elif senha != confirmar_senha:
         st.error("As senhas não coincidem. Tente novamente.")
     elif len(senha) < 6:
         st.error("A senha deve ter pelo menos 6 caracteres.")
     else:
         try:
-            auth_response = api_register(
-                {
-                    "nome": nome.strip(),
-                    "email": email.strip(),
-                    "senha": senha,
-                    "role": ROLE_MAP[tipo_conta],
-                }
-            )
+            payload = {
+                "nome": nome.strip(),
+                "email": email_normalizado,
+                "senha": senha,
+                "role": ROLE_MAP[tipo_conta],
+            }
+            if telefone_normalizado:
+                payload["telefone"] = telefone_normalizado
+
+            auth_response = api_register(payload)
             apply_auth_session(auth_response)
             st.success(f"Conta criada com sucesso, {nome.split()[0]}!")
             st.rerun()

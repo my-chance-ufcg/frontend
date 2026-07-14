@@ -14,6 +14,7 @@ from src.services.api_client import (
 )
 
 st.session_state.pop("cv_save_feedback", None)
+st.session_state._active_page = "dashboard_candidato"
 
 st.title("Painel do Candidato")
 

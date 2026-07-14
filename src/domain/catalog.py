@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 SKILLS = [
     {"key": "python", "label": "Python"},
     {"key": "javascript", "label": "JavaScript"},
@@ -39,34 +41,62 @@ SKILL_LABELS = {item["key"]: item["label"] for item in SKILLS}
 SKILL_OPTIONS = [item["label"] for item in SKILLS]
 
 EDUCATION_LEVELS = [
+    {"key": "ensino_medio_completo", "label": "Ensino Médio Completo"},
+    {"key": "tecnico", "label": "Ensino Técnico"},
+    {"key": "graduacao_andamento", "label": "Graduação em Andamento"},
     {"key": "graduacao_concluida", "label": "Graduação Concluída"},
     {"key": "pos_graduacao_andamento", "label": "Pós-Graduação em Andamento"},
     {"key": "pos_graduacao_concluida", "label": "Pós-Graduação Concluída"},
-    {"key": "tecnico", "label": "Ensino Técnico"},
 ]
 
 REGIONS = [
-    {"key": "norte", "label": "Região Norte"},
-    {"key": "nordeste", "label": "Região Nordeste"},
-    {"key": "centro_oeste", "label": "Região Centro-Oeste"},
-    {"key": "sudeste", "label": "Região Sudeste"},
-    {"key": "sul", "label": "Região Sul"},
+    {"key": "ac", "label": "Acre"},
+    {"key": "al", "label": "Alagoas"},
+    {"key": "ap", "label": "Amapá"},
+    {"key": "am", "label": "Amazonas"},
+    {"key": "ba", "label": "Bahia"},
+    {"key": "ce", "label": "Ceará"},
+    {"key": "df", "label": "Distrito Federal"},
+    {"key": "es", "label": "Espírito Santo"},
+    {"key": "go", "label": "Goiás"},
+    {"key": "ma", "label": "Maranhão"},
+    {"key": "mt", "label": "Mato Grosso"},
+    {"key": "ms", "label": "Mato Grosso do Sul"},
+    {"key": "mg", "label": "Minas Gerais"},
+    {"key": "pa", "label": "Pará"},
+    {"key": "pb", "label": "Paraíba"},
+    {"key": "pr", "label": "Paraná"},
+    {"key": "pe", "label": "Pernambuco"},
+    {"key": "pi", "label": "Piauí"},
+    {"key": "rj", "label": "Rio de Janeiro"},
+    {"key": "rn", "label": "Rio Grande do Norte"},
+    {"key": "rs", "label": "Rio Grande do Sul"},
+    {"key": "ro", "label": "Rondônia"},
+    {"key": "rr", "label": "Roraima"},
+    {"key": "sc", "label": "Santa Catarina"},
+    {"key": "sp", "label": "São Paulo"},
+    {"key": "se", "label": "Sergipe"},
+    {"key": "to", "label": "Tocantins"},
 ]
 
+# Alias semântico: o campo de localização do candidato/vaga é o Estado (UF).
+STATES = REGIONS
+
 ROLE_TITLES = [
-    "Desenvolvedor Backend Júnior",
-    "Desenvolvedor Backend Pleno",
-    "Desenvolvedor Frontend Júnior",
-    "Desenvolvedor Frontend Pleno",
-    "Desenvolvedor Full Stack Júnior",
-    "Desenvolvedor Full Stack Pleno",
-    "Analista de Dados Júnior",
-    "Analista de Dados Pleno",
-    "Engenheiro de Dados Júnior",
-    "Engenheiro de Dados Pleno",
-    "Estagiário de Desenvolvimento",
-    "Estagiário de Dados",
+    "Desenvolvedor Backend",
+    "Desenvolvedor Frontend",
+    "Desenvolvedor Full Stack",
+    "Analista de Dados",
+    "Engenheiro de Dados",
+    "Cientista de Dados",
+    "Engenheiro de Software",
+    "DevOps / SRE",
+    "Analista de Sistemas",
+    "Pesquisador",
+    "Outro",
 ]
+
+OUTRO_OPTION = "Outro"
 
 INVITE_STATUS_LABELS = {
     "ENVIADO": "Aguardando sua resposta",
@@ -74,6 +104,80 @@ INVITE_STATUS_LABELS = {
     "RECUSADO": "Recusado",
     "INVALIDADO": "Invalidado",
     "SUGERIDO": "Sugerido",
+}
+
+WORK_MODALITIES = [
+    {"key": "remoto", "label": "Remoto"},
+    {"key": "hibrido", "label": "Híbrido"},
+    {"key": "presencial", "label": "Presencial"},
+]
+
+EMPLOYMENT_TYPES = [
+    {"key": "bolsa_projeto", "label": "Bolsa / projeto acadêmico"},
+    {"key": "estagio", "label": "Estágio"},
+    {"key": "clt", "label": "CLT"},
+    {"key": "pj", "label": "PJ"},
+    {"key": "freelancer", "label": "Freelancer"},
+]
+
+SENIORITY_LEVELS = [
+    {"key": "bolsa_iniciacao", "label": "Bolsa / Iniciação"},
+    {"key": "estagio", "label": "Estágio"},
+    {"key": "junior", "label": "Júnior"},
+    {"key": "pleno", "label": "Pleno"},
+    {"key": "senior", "label": "Sênior"},
+    {"key": "especialista", "label": "Especialista"},
+]
+
+LANGUAGES = [
+    {"key": "portugues", "label": "Português"},
+    {"key": "ingles", "label": "Inglês"},
+    {"key": "espanhol", "label": "Espanhol"},
+    {"key": "frances", "label": "Francês"},
+    {"key": "alemao", "label": "Alemão"},
+    {"key": "italiano", "label": "Italiano"},
+    {"key": "mandarim", "label": "Mandarim"},
+    {"key": "japones", "label": "Japonês"},
+    {"key": "coreano", "label": "Coreano"},
+    {"key": "arabico", "label": "Árabe"},
+]
+
+LANGUAGE_LEVELS = [
+    {"key": "basico", "label": "Básico"},
+    {"key": "intermediario", "label": "Intermediário"},
+    {"key": "avancado", "label": "Avançado"},
+    {"key": "fluente", "label": "Fluente"},
+]
+
+STUDY_AREAS = [
+    {"key": "ciencia_computacao", "label": "Ciência da Computação"},
+    {"key": "engenharia_software", "label": "Engenharia de Software"},
+    {"key": "sistemas_informacao", "label": "Sistemas de Informação"},
+    {"key": "engenharia_computacao", "label": "Engenharia da Computação"},
+    {"key": "ads", "label": "Análise e Desenvolvimento de Sistemas"},
+    {"key": "ciencia_dados", "label": "Ciência de Dados"},
+    {"key": "engenharia_eletrica", "label": "Engenharia Elétrica"},
+    {"key": "matematica_aplicada", "label": "Matemática / Matemática Aplicada"},
+    {"key": "redes_computadores", "label": "Redes de Computadores"},
+    {"key": "seguranca_informacao", "label": "Segurança da Informação"},
+]
+
+STUDY_AREA_OUTRO = "outro"
+
+MONTH_OPTIONS = list(range(1, 13))
+MONTH_LABELS = {
+    1: "Janeiro",
+    2: "Fevereiro",
+    3: "Março",
+    4: "Abril",
+    5: "Maio",
+    6: "Junho",
+    7: "Julho",
+    8: "Agosto",
+    9: "Setembro",
+    10: "Outubro",
+    11: "Novembro",
+    12: "Dezembro",
 }
 
 
@@ -86,3 +190,20 @@ def label_to_skill_key(label: str) -> str:
         if item["label"] == label:
             return item["key"]
     raise ValueError(f"Skill não reconhecida: {label}")
+
+
+def catalog_keys(items: list[dict[str, str]]) -> list[str]:
+    return [item["key"] for item in items]
+
+
+def catalog_label(items: list[dict[str, str]], key: str | None) -> str:
+    if key is None:
+        return ""
+    for item in items:
+        if item["key"] == key:
+            return item["label"]
+    return key
+
+
+def format_month(month: int) -> str:
+    return MONTH_LABELS.get(month, str(month))

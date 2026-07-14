@@ -16,10 +16,13 @@ def render_skill_multiselect(
     exclude = set(exclude_labels or [])
     options = [skill for skill in SKILL_OPTIONS if skill not in exclude]
 
+    # Evita conflito Streamlit de default + key: só inicializa o estado se ainda não existir.
+    if key not in st.session_state:
+        st.session_state[key] = [item for item in default if item in options]
+
     return st.multiselect(
         label,
         options=options,
-        default=[item for item in default if item in options],
         key=key,
         placeholder="Digite para buscar...",
     )

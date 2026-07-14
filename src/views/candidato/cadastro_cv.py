@@ -1,19 +1,125 @@
+from __future__ import annotations
+
+from datetime import date
+
 import streamlit as st
 
 from src.domain.catalog import (
     EDUCATION_LEVELS,
-    REGIONS,
+    EMPLOYMENT_TYPES,
+    LANGUAGE_LEVELS,
+    LANGUAGES,
+    MONTH_OPTIONS,
+    OUTRO_OPTION,
     ROLE_TITLES,
+    SENIORITY_LEVELS,
     SKILL_LABELS,
+    STATES,
+    STUDY_AREA_OUTRO,
+    STUDY_AREAS,
+    WORK_MODALITIES,
+    catalog_keys,
+    catalog_label,
+    format_month,
     label_to_skill_key,
-    skill_key_to_label,
 )
 from src.domain.skill_picker import render_skill_multiselect
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, create_profile, get_my_profile, update_profile
 
+CURRENT_YEAR = date.today().year
+YEAR_OPTIONS = list(range(CURRENT_YEAR, 1989, -1))
+STUDY_OPTION_KEYS = [*catalog_keys(STUDY_AREAS), STUDY_AREA_OUTRO]
+PAGE_ID = "cadastro_cv"
+
+
+def _resolve_study_selection(curso_area: str | None) -> tuple[str | None, str]:
+    if not curso_area:
+        return None, ""
+    if curso_area in catalog_keys(STUDY_AREAS):
+        return curso_area, ""
+    return STUDY_AREA_OUTRO, curso_area
+
+
+def _resolve_cargo_selection(cargo: str | None) -> tuple[str, str]:
+    if cargo and cargo in ROLE_TITLES and cargo != OUTRO_OPTION:
+        return cargo, ""
+    if cargo and cargo != OUTRO_OPTION:
+        return OUTRO_OPTION, cargo
+    return ROLE_TITLES[0], ""
+
+
+def _sync_profile_widget_state(profile: dict) -> None:
+    st.session_state.candidato_id = profile["candidato_id"]
+    st.session_state._cv_data = profile
+
+    st.session_state["cv_education"] = profile.get("nivel_escolaridade") or catalog_keys(EDUCATION_LEVELS)[0]
+    estado = profile.get("estado")
+    st.session_state["cv_estado"] = estado if estado in catalog_keys(STATES) else catalog_keys(STATES)[0]
+
+    study_key, study_outro = _resolve_study_selection(profile.get("curso_area"))
+    st.session_state["cv_curso"] = study_key
+    st.session_state["cv_curso_outro"] = study_outro
+
+    st.session_state["cv_modalidades"] = [
+        key for key in (profile.get("modalidades_preferidas") or []) if key in catalog_keys(WORK_MODALITIES)
+    ]
+    st.session_state["cv_vinculos"] = [
+        key for key in (profile.get("vinculos_preferidos") or []) if key in catalog_keys(EMPLOYMENT_TYPES)
+    ]
+    pretensao = int(profile.get("pretensao_salarial_minima") or 3000)
+    st.session_state["cv_pretensao"] = max(1000, pretensao)
+    projetos = profile.get("projetos_destaque") or []
+    st.session_state["cv_projeto"] = projetos[0] if projetos else ""
+
+    skill_labels = [
+        SKILL_LABELS[key]
+        for key in (profile.get("competencias") or {}).keys()
+        if key in SKILL_LABELS
+    ]
+    st.session_state["cv_skills"] = skill_labels
+    for skill_key, level in (profile.get("competencias") or {}).items():
+        st.session_state[f"skill_level_{skill_key}"] = level
+
+    experiencias = profile.get("experiencias") or []
+    if experiencias:
+        st.session_state.exp_ids = list(range(len(experiencias)))
+        st.session_state.next_id = len(experiencias)
+        for index, exp in enumerate(experiencias):
+            cargo_choice, cargo_outro = _resolve_cargo_selection(exp.get("cargo"))
+            st.session_state[f"cargo_{index}"] = cargo_choice
+            st.session_state[f"cargo_outro_{index}"] = cargo_outro
+            st.session_state[f"senioridade_{index}"] = exp.get("senioridade") or "junior"
+            st.session_state[f"inicio_mes_{index}"] = int(exp.get("inicio_mes") or 1)
+            st.session_state[f"inicio_ano_{index}"] = int(exp.get("inicio_ano") or CURRENT_YEAR)
+            st.session_state[f"atual_{index}"] = bool(exp.get("atual", False))
+            st.session_state[f"fim_mes_{index}"] = int(exp.get("fim_mes") or date.today().month)
+            st.session_state[f"fim_ano_{index}"] = int(exp.get("fim_ano") or CURRENT_YEAR)
+    else:
+        st.session_state.exp_ids = [0]
+        st.session_state.next_id = 1
+
+    idiomas = profile.get("idiomas") or []
+    if idiomas:
+        st.session_state.lang_ids = list(range(len(idiomas)))
+        st.session_state.next_lang_id = len(idiomas)
+        for index, idioma in enumerate(idiomas):
+            idioma_key = idioma.get("idioma") or "portugues"
+            if idioma_key not in catalog_keys(LANGUAGES):
+                idioma_key = "portugues"
+            st.session_state[f"idioma_{index}"] = idioma_key
+            st.session_state[f"idioma_nivel_{index}"] = idioma.get("nivel") or "intermediario"
+    else:
+        st.session_state.lang_ids = [0]
+        st.session_state.next_lang_id = 1
+
 
 def _init_profile_form() -> None:
+    # Recarrega da API sempre que o usuário navega de outra página para esta.
+    if st.session_state.get("_active_page") != PAGE_ID:
+        st.session_state._cv_initialized = False
+    st.session_state._active_page = PAGE_ID
+
     if st.session_state.get("_cv_initialized"):
         return
 
@@ -21,28 +127,17 @@ def _init_profile_form() -> None:
         st.session_state.exp_ids = [0]
         st.session_state.next_id = 1
 
+    if "lang_ids" not in st.session_state:
+        st.session_state.lang_ids = [0]
+        st.session_state.next_lang_id = 1
+
     if not st.session_state.get("auth_token"):
         st.session_state._cv_initialized = True
         return
 
     try:
         profile = get_my_profile()
-        st.session_state.candidato_id = profile["candidato_id"]
-        st.session_state._cv_data = profile
-
-        experiencias = profile.get("experiencias") or []
-        if experiencias:
-            st.session_state.exp_ids = list(range(len(experiencias)))
-            st.session_state.next_id = len(experiencias)
-            for index, exp in enumerate(experiencias):
-                st.session_state[f"cargo_{index}"] = exp["cargo"]
-                st.session_state[f"tempo_{index}"] = exp["tempo_meses"]
-        else:
-            st.session_state.exp_ids = [0]
-            st.session_state.next_id = 1
-
-        for skill_key, level in (profile.get("competencias") or {}).items():
-            st.session_state[f"skill_level_{skill_key}"] = level
+        _sync_profile_widget_state(profile)
     except ApiError:
         pass
 
@@ -50,7 +145,6 @@ def _init_profile_form() -> None:
 
 
 _init_profile_form()
-cv_data = st.session_state.get("_cv_data", {})
 
 
 def _render_save_feedback() -> None:
@@ -87,16 +181,9 @@ st.caption(
     "Digite no campo para encontrar uma tecnologia."
 )
 
-default_skill_labels = [
-    SKILL_LABELS[key]
-    for key in (cv_data.get("competencias") or {}).keys()
-    if key in SKILL_LABELS
-]
-
 skills_selecionadas = render_skill_multiselect(
     "Competências:",
     key="cv_skills",
-    default=default_skill_labels,
 )
 
 competencias: dict[str, int] = {}
@@ -104,82 +191,211 @@ if skills_selecionadas:
     with st.container(border=True):
         for skill_label in skills_selecionadas:
             skill_key = label_to_skill_key(skill_label)
-            default_level = st.session_state.get(
-                f"skill_level_{skill_key}",
-                (cv_data.get("competencias") or {}).get(skill_key, 3),
-            )
             competencias[skill_key] = st.slider(
                 f"Nível em {skill_label}",
                 min_value=0,
                 max_value=5,
-                value=int(default_level),
+                value=int(st.session_state.get(f"skill_level_{skill_key}", 3)),
                 key=f"skill_level_{skill_key}",
             )
 
 st.write("---")
 
 st.subheader("2. Informações gerais")
-education_keys = [item["key"] for item in EDUCATION_LEVELS]
-region_keys = [item["key"] for item in REGIONS]
-default_education = cv_data.get("nivel_escolaridade") or education_keys[0]
-default_region = cv_data.get("regiao") or region_keys[0]
+education_keys = catalog_keys(EDUCATION_LEVELS)
+state_keys = catalog_keys(STATES)
+modality_keys = catalog_keys(WORK_MODALITIES)
+employment_keys = catalog_keys(EMPLOYMENT_TYPES)
+language_keys = catalog_keys(LANGUAGES)
+language_level_keys = catalog_keys(LANGUAGE_LEVELS)
+seniority_keys = catalog_keys(SENIORITY_LEVELS)
 
-col_edu, col_reg = st.columns(2)
+col_edu, col_estado = st.columns(2)
 with col_edu:
     nivel_escolaridade = st.selectbox(
         "Nível de escolaridade",
         options=education_keys,
-        index=education_keys.index(default_education) if default_education in education_keys else 0,
-        format_func=lambda key: next(item["label"] for item in EDUCATION_LEVELS if item["key"] == key),
+        format_func=lambda key: catalog_label(EDUCATION_LEVELS, key),
+        key="cv_education",
     )
-with col_reg:
-    regiao = st.selectbox(
-        "Região",
-        options=region_keys,
-        index=region_keys.index(default_region) if default_region in region_keys else 0,
-        format_func=lambda key: next(item["label"] for item in REGIONS if item["key"] == key),
+with col_estado:
+    estado = st.selectbox(
+        "Estado",
+        options=state_keys,
+        format_func=lambda key: catalog_label(STATES, key),
+        key="cv_estado",
     )
 
-st.write("---")
+curso_options = [None, *STUDY_OPTION_KEYS]
+curso_selecionado = st.selectbox(
+    "Área de formação (opcional)",
+    options=curso_options,
+    format_func=lambda key: (
+        "—"
+        if key is None
+        else "Outro"
+        if key == STUDY_AREA_OUTRO
+        else catalog_label(STUDY_AREAS, key)
+    ),
+    key="cv_curso",
+)
 
-st.subheader("3. Pretensão Salarial")
-pretensao_minima = st.number_input(
-    "Valor mínimo mensal aceitável (R$)",
-    min_value=1,
-    step=100,
-    value=int(cv_data.get("pretensao_salarial_minima") or 3000),
-    help="Vagas com salário abaixo deste valor não serão sugeridas a você.",
+curso_area: str | None = None
+if curso_selecionado == STUDY_AREA_OUTRO:
+    curso_outro = st.text_input(
+        "Descreva a área de formação",
+        max_chars=150,
+        key="cv_curso_outro",
+        placeholder="Ex.: Design Digital, Física Computacional...",
+    )
+    curso_area = curso_outro.strip() or None
+elif curso_selecionado:
+    curso_area = curso_selecionado
+
+modalidades_preferidas = st.multiselect(
+    "Modalidades de trabalho preferidas",
+    options=modality_keys,
+    format_func=lambda key: catalog_label(WORK_MODALITIES, key),
+    placeholder="Selecione uma ou mais...",
+    key="cv_modalidades",
+)
+
+vinculos_preferidos = st.multiselect(
+    "Tipos de vínculo preferidos",
+    options=employment_keys,
+    format_func=lambda key: catalog_label(EMPLOYMENT_TYPES, key),
+    placeholder="Selecione um ou mais...",
+    key="cv_vinculos",
 )
 
 st.write("---")
 
-st.subheader("4. Histórico de Experiências")
+st.subheader("3. Idiomas")
+st.caption("Informe ao menos um idioma e o nível correspondente.")
 
-experiencias = []
+idiomas: list[dict[str, str]] = []
+for lang_id in list(st.session_state.lang_ids):
+    with st.container(border=True):
+        if st.button("✖", key=f"del_lang_{lang_id}", help="Remover idioma"):
+            st.session_state.lang_ids.remove(lang_id)
+            st.rerun()
+
+        col_idioma, col_nivel = st.columns(2)
+        with col_idioma:
+            idioma = st.selectbox(
+                "Idioma",
+                options=language_keys,
+                format_func=lambda key: catalog_label(LANGUAGES, key),
+                key=f"idioma_{lang_id}",
+            )
+        with col_nivel:
+            nivel = st.selectbox(
+                "Nível",
+                options=language_level_keys,
+                format_func=lambda key: catalog_label(LANGUAGE_LEVELS, key),
+                key=f"idioma_nivel_{lang_id}",
+            )
+        idiomas.append({"idioma": idioma, "nivel": nivel})
+
+if st.button("➕ Adicionar outro idioma"):
+    st.session_state.lang_ids.append(st.session_state.next_lang_id)
+    st.session_state.next_lang_id += 1
+    st.rerun()
+
+st.write("---")
+
+st.subheader("4. Pretensão Salarial")
+pretensao_minima = st.number_input(
+    "Valor mínimo mensal aceitável (R$)",
+    min_value=1000,
+    step=100,
+    help="Vagas com salário abaixo deste valor não serão sugeridas a você.",
+    key="cv_pretensao",
+)
+
+st.write("---")
+
+st.subheader("5. Histórico de Experiências")
+
+experiencias: list[dict] = []
 for exp_id in list(st.session_state.exp_ids):
     with st.container(border=True):
         if st.button("✖", key=f"del_{exp_id}", help="Remover experiência"):
             st.session_state.exp_ids.remove(exp_id)
             st.rerun()
 
-        default_cargo = st.session_state.get(f"cargo_{exp_id}", ROLE_TITLES[0])
-        default_tempo = int(st.session_state.get(f"tempo_{exp_id}", 12))
-
-        cargo = st.selectbox(
+        cargo_selecionado = st.selectbox(
             "Cargo",
             options=ROLE_TITLES,
-            index=ROLE_TITLES.index(default_cargo) if default_cargo in ROLE_TITLES else 0,
             key=f"cargo_{exp_id}",
         )
-        tempo_meses = st.number_input(
-            "Tempo na função (meses)",
-            min_value=1,
-            step=1,
-            value=default_tempo,
-            key=f"tempo_{exp_id}",
+        if cargo_selecionado == OUTRO_OPTION:
+            cargo_valor = st.text_input(
+                "Descreva o cargo",
+                max_chars=150,
+                key=f"cargo_outro_{exp_id}",
+                placeholder="Ex.: Analista de QA, Product Designer...",
+            ).strip()
+        else:
+            cargo_valor = cargo_selecionado
+
+        senioridade = st.selectbox(
+            "Senioridade",
+            options=seniority_keys,
+            format_func=lambda key: catalog_label(SENIORITY_LEVELS, key),
+            key=f"senioridade_{exp_id}",
         )
-        if tempo_meses >= 1:
-            experiencias.append({"cargo": cargo, "tempo_meses": int(tempo_meses)})
+
+        col_mes, col_ano = st.columns(2)
+        with col_mes:
+            inicio_mes = st.selectbox(
+                "Mês de início",
+                options=MONTH_OPTIONS,
+                format_func=format_month,
+                key=f"inicio_mes_{exp_id}",
+            )
+        with col_ano:
+            inicio_ano = st.selectbox(
+                "Ano de início",
+                options=YEAR_OPTIONS,
+                key=f"inicio_ano_{exp_id}",
+            )
+
+        atual = st.checkbox(
+            "Trabalho atual",
+            key=f"atual_{exp_id}",
+        )
+
+        experience_item = {
+            "cargo": cargo_valor,
+            "senioridade": senioridade,
+            "inicio_mes": int(inicio_mes),
+            "inicio_ano": int(inicio_ano),
+            "atual": atual,
+            "fim_mes": None,
+            "fim_ano": None,
+        }
+
+        if not atual:
+            col_fim_mes, col_fim_ano = st.columns(2)
+            with col_fim_mes:
+                fim_mes = st.selectbox(
+                    "Mês de fim",
+                    options=MONTH_OPTIONS,
+                    format_func=format_month,
+                    key=f"fim_mes_{exp_id}",
+                )
+            with col_fim_ano:
+                fim_ano = st.selectbox(
+                    "Ano de fim",
+                    options=YEAR_OPTIONS,
+                    key=f"fim_ano_{exp_id}",
+                )
+            experience_item["fim_mes"] = int(fim_mes)
+            experience_item["fim_ano"] = int(fim_ano)
+
+        if cargo_valor:
+            experiencias.append(experience_item)
 
 if st.button("➕ Adicionar outra experiência"):
     st.session_state.exp_ids.append(st.session_state.next_id)
@@ -188,37 +404,51 @@ if st.button("➕ Adicionar outra experiência"):
 
 st.write("---")
 
-st.subheader("5. Projetos de Destaque")
-default_projeto = ""
-projetos = cv_data.get("projetos_destaque") or []
-if projetos:
-    default_projeto = projetos[0]
-
+st.subheader("6. Projetos de Destaque")
 projeto_destaque = st.text_area(
     "Descreva um projeto significativo (máx. 250 caracteres, foco em tecnologias):",
-    value=default_projeto,
     max_chars=250,
     height=120,
+    key="cv_projeto",
 )
 
 st.write("---")
 
 button_label = "Salvar alterações" if st.session_state.get("candidato_id") else "Publicar meu perfil"
 if st.button(button_label, type="primary", use_container_width=True):
+    cargos_incompletos = any(
+        (st.session_state.get(f"cargo_{exp_id}") == OUTRO_OPTION)
+        and not str(st.session_state.get(f"cargo_outro_{exp_id}") or "").strip()
+        for exp_id in st.session_state.exp_ids
+    )
     if not competencias:
         st.error("Selecione ao menos uma competência com nível informado.")
+    elif curso_selecionado == STUDY_AREA_OUTRO and not curso_area:
+        st.error("Descreva a área de formação ou escolha outra opção.")
+    elif not modalidades_preferidas:
+        st.error("Selecione ao menos uma modalidade de trabalho preferida.")
+    elif not vinculos_preferidos:
+        st.error("Selecione ao menos um tipo de vínculo preferido.")
+    elif not idiomas:
+        st.error("Informe ao menos um idioma.")
+    elif cargos_incompletos:
+        st.error("Preencha a descrição do cargo quando selecionar Outro.")
     elif not experiencias:
-        st.error("Informe ao menos uma experiência com tempo em meses.")
-    elif not projeto_destaque.strip():
+        st.error("Informe ao menos uma experiência profissional.")
+    elif not str(projeto_destaque or "").strip():
         st.error("Descreva ao menos um projeto de destaque.")
     else:
         payload = {
             "competencias": competencias,
             "experiencias": experiencias,
-            "projetos_destaque": [projeto_destaque.strip()],
+            "projetos_destaque": [str(projeto_destaque).strip()],
             "nivel_escolaridade": nivel_escolaridade,
-            "regiao": regiao,
+            "estado": estado,
+            "curso_area": curso_area,
             "pretensao_salarial_minima": int(pretensao_minima),
+            "modalidades_preferidas": modalidades_preferidas,
+            "vinculos_preferidos": vinculos_preferidos,
+            "idiomas": idiomas,
         }
 
         try:

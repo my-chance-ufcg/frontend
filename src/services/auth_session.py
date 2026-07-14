@@ -22,3 +22,9 @@ def clear_auth_session() -> None:
     st.session_state.candidato_id = None
     st.session_state.vaga_id = None
     st.session_state.pop("cv_save_feedback", None)
+    st.session_state.pop("_cv_initialized", None)
+    st.session_state.pop("_cv_data", None)
+    st.session_state.pop("_active_page", None)
+    for key in list(st.session_state.keys()):
+        if str(key).startswith("cv_") or str(key).startswith("cargo_") or str(key).startswith("skill_"):
+            st.session_state.pop(key, None)

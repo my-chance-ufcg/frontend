@@ -5,6 +5,7 @@ from typing import Any
 
 import streamlit as st
 
+from src.domain.catalog import SENIORITY_LEVELS, catalog_label
 from src.domain.invite_status import format_datetime_human, render_job_description, schedule_status_badge
 from src.domain.user_messages import friendly_error
 from src.services.api_client import (
@@ -13,6 +14,30 @@ from src.services.api_client import (
     schedule_interview,
     send_invite,
 )
+
+
+def _format_experience_line(exp: dict[str, Any]) -> str:
+    cargo = exp.get("cargo") or "Experiência"
+    details: list[str] = []
+
+    senioridade = exp.get("senioridade")
+    if senioridade:
+        details.append(catalog_label(SENIORITY_LEVELS, senioridade))
+
+    if exp.get("tempo_meses") is not None:
+        details.append(f"{exp['tempo_meses']} meses")
+    elif exp.get("inicio_mes") and exp.get("inicio_ano"):
+        start = f"{int(exp['inicio_mes']):02d}/{exp['inicio_ano']}"
+        if exp.get("atual"):
+            details.append(f"{start} — atual")
+        elif exp.get("fim_mes") and exp.get("fim_ano"):
+            details.append(f"{start} — {int(exp['fim_mes']):02d}/{exp['fim_ano']}")
+        else:
+            details.append(start)
+
+    if details:
+        return f"{cargo} ({', '.join(details)})"
+    return cargo
 
 
 def render_job_selector(jobs: list[dict[str, Any]]) -> str | None:
@@ -82,10 +107,7 @@ def _render_recommendation_card(
         st.markdown(f"**Competências:** {', '.join(item['competencias_tecnicas'])}")
 
         if item.get("experiencias"):
-            exp_lines = [
-                f"{exp['cargo']} ({exp['tempo_meses']} meses)"
-                for exp in item["experiencias"]
-            ]
+            exp_lines = [_format_experience_line(exp) for exp in item["experiencias"]]
             st.markdown(f"**Experiências:** {', '.join(exp_lines)}")
 
         if show_invite_button and vaga_id:
@@ -152,7 +174,7 @@ def render_pending_tab(pending_invites: list[dict[str, Any]]) -> None:
 
 def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
     st.caption(
-        "Depois que o candidato aceita, você vê nome e e-mail. "
+        "Depois que o candidato aceita, você vê nome, e-mail e telefone. "
         "Proponha data, horário e link da reunião — a entrevista só fica confirmada "
         "quando os dois concordarem."
     )
@@ -179,6 +201,11 @@ def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
                 st.markdown("#### Contato do candidato")
                 st.markdown(f"**Nome:** {invite['candidato_nome']}")
                 st.markdown(f"**E-mail:** [{invite['candidato_email']}](mailto:{invite['candidato_email']})")
+                if invite.get("candidato_telefone"):
+                    telefone = invite["candidato_telefone"]
+                    digits = "".join(ch for ch in telefone if ch.isdigit())
+                    tel_href = f"+55{digits}" if digits else telefone
+                    st.markdown(f"**Telefone:** [{telefone}](tel:{tel_href})")
 
             _render_schedule_section(invite)
 
