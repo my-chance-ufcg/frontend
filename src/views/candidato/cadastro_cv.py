@@ -26,6 +26,7 @@ from src.domain.catalog import (
 from src.domain.skill_picker import render_skill_multiselect
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, create_profile, get_my_profile, update_profile
+from src.ui.layout import render_page_header
 
 CURRENT_YEAR = date.today().year
 YEAR_OPTIONS = list(range(CURRENT_YEAR, 1989, -1))
@@ -161,12 +162,16 @@ def _render_save_feedback() -> None:
         st.success("Seu currículo foi atualizado com sucesso.")
 
 
-st.title("Meu Currículo")
-
-if st.session_state.get("candidato_id"):
-    st.caption("Seu perfil está ativo. Recrutadores veem apenas suas competências até você aceitar um convite.")
-else:
-    st.caption("Preencha os campos abaixo para publicar seu perfil.")
+render_page_header(
+    title="Meu currículo",
+    eyebrow="Perfil anonimizado",
+    subtitle=(
+        "Seu perfil está ativo. Recrutadores veem apenas suas competências até você aceitar um convite."
+        if st.session_state.get("candidato_id")
+        else "Preencha os campos abaixo para publicar seu perfil e começar a receber oportunidades."
+    ),
+    badge="Perfil ativo" if st.session_state.get("candidato_id") else None,
+)
 
 st.warning(
     "Seu nome e contatos **não** aparecem para recrutadores nesta etapa. "

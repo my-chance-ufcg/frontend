@@ -1,0 +1,174 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+:root {
+    --mc-blue: #225BFD;
+    --mc-bg: #F8F9FA;
+    --mc-white: #FFFFFF;
+    --mc-graphite: #202736;
+    --mc-muted: #637085;
+    --mc-success: #10B981;
+    --mc-border: #E4E8EF;
+}
+
+html, body, [class*="css"] {
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--mc-graphite);
+}
+
+.stApp {
+    background: var(--mc-bg);
+}
+
+#MainMenu, footer {
+    visibility: hidden;
+    height: 0;
+}
+
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stHeader"] [data-testid="stToolbar"] button {
+    visibility: visible !important;
+    display: flex !important;
+}
+
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+    max-width: 1120px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--mc-graphite);
+    letter-spacing: -0.02em;
+}
+
+code, pre, .stCode, [data-testid="stMarkdownContainer"] code {
+    font-family: "JetBrains Mono", ui-monospace, monospace !important;
+}
+
+[data-testid="stSidebar"] {
+    background: var(--mc-white);
+    border-right: 1px solid var(--mc-border);
+}
+
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+    color: var(--mc-muted);
+}
+
+[data-testid="stSidebarNav"] a {
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"] {
+    background: rgba(34, 91, 253, 0.08);
+    color: var(--mc-blue);
+}
+
+div[data-testid="stMetric"] {
+    background: var(--mc-white);
+    border: 1px solid var(--mc-border);
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 8px 24px rgba(32, 39, 54, 0.04);
+}
+
+div[data-testid="stMetric"] label {
+    color: var(--mc-muted) !important;
+    font-size: 0.82rem !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: var(--mc-graphite);
+    font-weight: 700;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.35rem;
+    background: transparent;
+    border-bottom: 1px solid var(--mc-border);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border-radius: 10px 10px 0 0;
+    color: var(--mc-muted);
+    font-weight: 600;
+    padding: 0.55rem 1rem;
+}
+
+.stTabs [aria-selected="true"] {
+    background: rgba(34, 91, 253, 0.08) !important;
+    color: var(--mc-blue) !important;
+}
+
+div[data-testid="stForm"],
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: var(--mc-border) !important;
+    border-radius: 16px !important;
+    background: var(--mc-white);
+    box-shadow: 0 10px 30px rgba(32, 39, 54, 0.05);
+}
+
+.stButton > button[kind="primary"] {
+    background: var(--mc-blue);
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(34, 91, 253, 0.22);
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: #1a4ae0;
+    box-shadow: 0 12px 28px rgba(34, 91, 253, 0.28);
+}
+
+.stButton > button[kind="secondary"] {
+    border-radius: 10px;
+    border-color: var(--mc-border);
+    color: var(--mc-graphite);
+    font-weight: 600;
+}
+
+[data-testid="stAlert"] {
+    border-radius: 12px;
+}
+
+.mc-page-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(34, 91, 253, 0.08);
+    color: var(--mc-blue);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+
+.mc-page-subtitle {
+    color: var(--mc-muted);
+    font-size: 1rem;
+    line-height: 1.55;
+    margin-top: 0.35rem;
+}
+
+.mc-chip-success {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: #0f9f74;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-left: 0.35rem;
+}

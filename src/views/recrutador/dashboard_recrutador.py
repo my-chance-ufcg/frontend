@@ -2,6 +2,7 @@ import streamlit as st
 
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, get_recommendations, list_job_invites, list_my_jobs
+from src.ui.layout import render_page_header
 from src.views.recrutador.painel_vaga import (
     render_confirmed_tab,
     render_job_metrics,
@@ -10,7 +11,11 @@ from src.views.recrutador.painel_vaga import (
     render_suggestions_tab,
 )
 
-st.title("Painel do Recrutador")
+render_page_header(
+    title="Vagas ativas",
+    eyebrow="Área do recrutador",
+    subtitle="Selecione uma vaga para revisar candidatos sugeridos, convites pendentes e entrevistas confirmadas.",
+)
 
 st.session_state.pop("job_save_feedback", None)
 
@@ -21,7 +26,7 @@ except ApiError as error:
     st.stop()
 
 if not jobs:
-    st.warning("Nenhuma vaga cadastrada. Crie uma em **Gerenciar Vagas**.")
+    st.warning("Nenhuma vaga cadastrada. Publique uma em **Publicar vaga**.")
     st.stop()
 
 vaga_id = render_job_selector(jobs)

@@ -1,0 +1,22 @@
+/* Garante sidebar visível nas páginas autenticadas (mesma especificidade do theme_auth). */
+.stApp [data-testid="stSidebar"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+/* Rodapé (perfil + sair) colado na base da área visível da sidebar. */
+.stApp [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    position: sticky;
+    bottom: 0;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    background: var(--mc-white);
+    border-top: 1px solid var(--mc-border);
+    z-index: 2;
+}
+
+.stApp [data-testid="stSidebar"] .mc-sidebar-footer-marker {
+    display: none;
+}

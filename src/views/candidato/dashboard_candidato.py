@@ -13,10 +13,16 @@ from src.services.api_client import (
     reject_invite,
 )
 
+from src.ui.layout import render_page_header
+
 st.session_state.pop("cv_save_feedback", None)
 st.session_state._active_page = "dashboard_candidato"
 
-st.title("Painel do Candidato")
+render_page_header(
+    title="Painel do candidato",
+    eyebrow="Área do candidato",
+    subtitle="Acompanhe convites, confirme entrevistas e gerencie sua visibilidade na plataforma.",
+)
 
 candidato_id = st.session_state.get("candidato_id")
 if not candidato_id and st.session_state.get("auth_token"):
@@ -30,11 +36,13 @@ if not candidato_id and st.session_state.get("auth_token"):
         candidato_id = None
 
 if not candidato_id:
-    st.warning("Complete seu currículo em **Editar Meu Currículo** para receber convites de entrevista.")
+    st.warning("Complete seu currículo em **Meu currículo** para receber convites de entrevista.")
     st.stop()
 
-st.metric(label="Seu perfil", value="Ativo")
-st.caption("Recrutadores enxergam suas competências; seus dados pessoais só são compartilhados se você aceitar um convite.")
+st.caption(
+    "Recrutadores enxergam suas competências; seus dados pessoais só são compartilhados "
+    "se você aceitar um convite."
+)
 st.write("---")
 
 try:

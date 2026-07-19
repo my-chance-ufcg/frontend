@@ -1,0 +1,148 @@
+.stApp {
+    background: linear-gradient(135deg, #f3f6ff 0%, var(--mc-bg) 45%, #eef2ff 100%) !important;
+}
+
+.stApp .block-container {
+    max-width: 1080px;
+    padding-top: 1rem;
+}
+
+.stApp [data-testid="stHeader"] {
+    visibility: visible !important;
+    height: auto !important;
+    background: transparent;
+    border-bottom: none;
+}
+
+.stApp [data-testid="stToolbar"] {
+    visibility: hidden;
+    height: 0;
+}
+
+.stApp [data-testid="stDecoration"] {
+    display: none;
+}
+
+.stApp [data-testid="stSidebar"] {
+    display: none;
+}
+
+.stApp [data-testid="stMain"] > div:first-child {
+    padding-top: 0.25rem;
+}
+
+.stApp [data-testid="stHorizontalBlock"]:has(.mc-auth-brand-marker) {
+    align-items: center !important;
+    gap: 1.75rem !important;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) > div[data-testid="stVerticalBlock"] {
+    background: linear-gradient(160deg, #1b2440 0%, var(--mc-graphite) 55%, #111827 100%) !important;
+    border-radius: 24px;
+    padding: 2.25rem 2rem;
+    min-height: 560px;
+    box-shadow: 0 24px 60px rgba(32, 39, 54, 0.18);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-form-marker) > div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--mc-white) !important;
+    border: 1px solid var(--mc-border) !important;
+    border-radius: 24px;
+    padding: 2rem 2rem 1.5rem;
+    box-shadow: 0 18px 48px rgba(32, 39, 54, 0.08);
+    min-height: 560px;
+}
+
+.stApp .mc-auth-brand-marker {
+    display: none;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h1,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h2,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h3,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h4,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) p,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) li,
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) strong {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h4 {
+    font-size: 1.75rem;
+    line-height: 1.25;
+    font-weight: 700;
+    margin: 0 0 1rem;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) h4 strong {
+    color: #ffffff !important;
+    font-weight: 800;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) p {
+    color: rgba(255, 255, 255, 0.78) !important;
+    font-size: 1rem;
+    line-height: 1.65;
+    margin-bottom: 1.5rem;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) ul {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) li {
+    position: relative;
+    padding-left: 1.15rem;
+    margin-bottom: 0.85rem;
+    color: rgba(255, 255, 255, 0.88) !important;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) li::marker {
+    content: "";
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) [data-testid="stMarkdownContainer"] ul li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: var(--mc-blue);
+    box-shadow: 0 0 0 4px rgba(34, 91, 253, 0.18);
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) [data-testid="stImage"] {
+    margin-bottom: 1.25rem;
+    max-width: 280px;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-brand-marker) [data-testid="stImage"] img {
+    width: 100%;
+    height: auto;
+}
+
+.stApp .mc-auth-form-marker {
+    display: none;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-form-marker) h3 {
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-form-marker) [data-testid="stCaptionContainer"] {
+    margin-bottom: 1.25rem;
+}
+
+.stApp [data-testid="column"]:has(.mc-auth-form-marker) [data-testid="stPageLink-NavLink"] {
+    margin-top: 1rem;
+}

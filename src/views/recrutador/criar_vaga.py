@@ -16,6 +16,7 @@ from src.domain.catalog import (
 from src.domain.skill_picker import render_skill_multiselect
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, create_job, get_job, get_recommendations, list_my_jobs, update_job
+from src.ui.layout import render_page_header
 
 
 def _form_scope(editing_job_id: str | None) -> str:
@@ -247,7 +248,11 @@ def _render_job_save_feedback() -> None:
         st.info("Nenhum candidato compatível encontrado no momento.")
 
 
-st.title("Gerenciar Vagas")
+render_page_header(
+    title="Publicar vaga",
+    eyebrow="Gestão de oportunidades",
+    subtitle="Informe os dados da vaga para publicá-la e encontrar candidatos compatíveis.",
+)
 
 modo = st.radio("Ação", ["Criar nova vaga", "Editar vaga existente"], horizontal=True)
 
@@ -291,7 +296,6 @@ employment_keys = catalog_keys(EMPLOYMENT_TYPES)
 seniority_keys = catalog_keys(SENIORITY_LEVELS)
 state_keys = catalog_keys(STATES)
 
-st.markdown("Informe os dados da vaga para publicá-la e encontrar candidatos compatíveis.")
 st.write("---")
 
 st.subheader("1. Informações básicas")

@@ -1,6 +1,14 @@
 import streamlit as st
 
-st.set_page_config(page_title="My Chance", layout="centered")
+from src.ui.paths import LOGO_FAVICON, LOGO_SYMBOL_COLOR
+from src.ui.theme import inject_theme
+
+st.set_page_config(
+    page_title="MyChance",
+    page_icon=str(LOGO_FAVICON),
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
@@ -13,29 +21,64 @@ if "candidato_id" not in st.session_state:
 if "vaga_id" not in st.session_state:
     st.session_state.vaga_id = None
 
-page_login = st.Page("src/views/common/login.py", title="Fazer Login")
-page_registro = st.Page("src/views/common/registro.py", title="Criar Conta")
+is_authenticated = st.session_state.user_role is not None
+inject_theme(auth_page=not is_authenticated)
 
-page_dashboard_cand = st.Page("src/views/candidato/dashboard_candidato.py", title="Painel do Candidato")
-page_cv = st.Page("src/views/candidato/cadastro_cv.py", title="Editar Meu Currículo")
+page_login = st.Page(
+    "src/views/common/login.py",
+    title="Entrar",
+    icon=":material/login:",
+    default=not is_authenticated,
+)
+page_registro = st.Page(
+    "src/views/common/registro.py",
+    title="Criar conta",
+    icon=":material/person_add:",
+)
 
-page_dashboard_rec = st.Page("src/views/recrutador/dashboard_recrutador.py", title="Painel do Recrutador")
-page_vagas = st.Page("src/views/recrutador/criar_vaga.py", title="Gerenciar Vagas")
+page_dashboard_cand = st.Page(
+    "src/views/candidato/dashboard_candidato.py",
+    title="Início",
+    icon=":material/inbox:",
+    default=True,
+)
+page_cv = st.Page(
+    "src/views/candidato/cadastro_cv.py",
+    title="Meu currículo",
+    icon=":material/description:",
+)
+
+page_dashboard_rec = st.Page(
+    "src/views/recrutador/dashboard_recrutador.py",
+    title="Vagas ativas",
+    icon=":material/work:",
+    default=True,
+)
+page_vagas = st.Page(
+    "src/views/recrutador/criar_vaga.py",
+    title="Publicar vaga",
+    icon=":material/add_business:",
+)
 
 if st.session_state.user_role == "Candidato":
-    pg = st.navigation([page_dashboard_cand, page_cv])
+    if LOGO_SYMBOL_COLOR.exists():
+        st.logo(str(LOGO_SYMBOL_COLOR), size="small")
+    pg = st.navigation([page_dashboard_cand, page_cv], position="sidebar")
 elif st.session_state.user_role == "Recrutador":
-    pg = st.navigation([page_dashboard_rec, page_vagas])
+    if LOGO_SYMBOL_COLOR.exists():
+        st.logo(str(LOGO_SYMBOL_COLOR), size="small")
+    pg = st.navigation([page_dashboard_rec, page_vagas], position="sidebar")
 else:
-    pg = st.navigation([page_login, page_registro])
+    pg = st.navigation([page_login, page_registro], position="top")
 
 pg.run()
 
-if st.session_state.user_role is not None:
+if is_authenticated:
     with st.sidebar:
-        st.markdown("<div style='height: 50vh;'></div>", unsafe_allow_html=True)
-        st.write("---")
-        if st.button("Sair", use_container_width=True):
+        st.markdown('<div class="mc-sidebar-footer-marker"></div>', unsafe_allow_html=True)
+        st.markdown(f"**{st.session_state.user_role}**")
+        st.caption("Sessão ativa")
+        if st.button("Sair da conta", use_container_width=True):
             from src.services.auth_session import clear_auth_session
 
             clear_auth_session()
