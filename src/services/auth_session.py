@@ -5,6 +5,7 @@ from src.services.api_client import ApiError, login as api_login
 ROLE_LABELS = {
     "CANDIDATE": "Candidato",
     "RECRUITER": "Recrutador",
+    "ADMIN": "Administrador",
 }
 
 

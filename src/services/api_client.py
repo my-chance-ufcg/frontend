@@ -221,3 +221,13 @@ def update_job(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         timeout=20,
     )
     return _handle_response(response)
+
+
+def reset_demo_data(scenario: str = "base") -> dict[str, Any]:
+    response = requests.post(
+        f"{API_BASE_URL}/api/v1/admin/reset",
+        params={"scenario": scenario},
+        headers=_auth_headers(),
+        timeout=60,
+    )
+    return _handle_response(response)

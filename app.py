@@ -60,6 +60,13 @@ page_vagas = st.Page(
     icon=":material/add_business:",
 )
 
+page_admin_reset = st.Page(
+    "src/views/admin/reset_demo.py",
+    title="Preparar testes",
+    icon=":material/restore:",
+    default=True,
+)
+
 if st.session_state.user_role == "Candidato":
     if LOGO_SYMBOL_COLOR.exists():
         st.logo(str(LOGO_SYMBOL_COLOR), size="small")
@@ -68,6 +75,10 @@ elif st.session_state.user_role == "Recrutador":
     if LOGO_SYMBOL_COLOR.exists():
         st.logo(str(LOGO_SYMBOL_COLOR), size="small")
     pg = st.navigation([page_dashboard_rec, page_vagas], position="sidebar")
+elif st.session_state.user_role == "Administrador":
+    if LOGO_SYMBOL_COLOR.exists():
+        st.logo(str(LOGO_SYMBOL_COLOR), size="small")
+    pg = st.navigation([page_admin_reset], position="sidebar")
 else:
     pg = st.navigation([page_login, page_registro], position="top")
 

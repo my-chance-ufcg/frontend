@@ -24,7 +24,7 @@ with col_form:
                 if email_cand and senha_cand:
                     try:
                         apply_auth_session(api_login({"email": email_cand.strip(), "senha": senha_cand}))
-                        if st.session_state.user_role != "Candidato":
+                        if st.session_state.user_role not in ("Candidato", "Administrador"):
                             from src.services.auth_session import clear_auth_session
 
                             clear_auth_session()
