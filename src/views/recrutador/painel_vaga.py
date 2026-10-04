@@ -5,7 +5,15 @@ from typing import Any
 
 import streamlit as st
 
-from src.domain.catalog import SENIORITY_LEVELS, catalog_label
+from src.domain.catalog import (
+    SENIORITY_LEVELS, 
+    SALARY_RANGES,
+    SOFT_SKILL_LABELS,
+    BENEFIT_LABELS,
+    catalog_label,
+    catalog_keys
+)
+from src.domain.skill_picker import render_soft_skill_multiselect, render_benefit_multiselect
 from src.domain.invite_status import format_datetime_human, render_job_description, schedule_status_badge
 from src.domain.user_messages import friendly_error
 from src.services.api_client import (
@@ -127,6 +135,13 @@ def _render_recommendation_card(
                     st.error(friendly_error(error, "Não foi possível enviar o convite."))
 
 
+def _label_to_key(labels_dict: dict, label: str) -> str:
+    for k, v in labels_dict.items():
+        if v == label:
+            return k
+    return label
+
+
 def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) -> None:
     st.subheader("Candidatos compatíveis")
     st.caption(
@@ -144,9 +159,45 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
     disponiveis, recusados = _split_recommendations(recommendations)
 
     if disponiveis:
-        st.markdown("#### Disponíveis para convite")
-        for item in disponiveis:
-            _render_recommendation_card(item, vaga_id=vaga_id)
+        with st.expander("Filtros Avançados", expanded=False):
+            col_f1, col_f2, col_f3 = st.columns(3)
+            with col_f1:
+                filtro_soft = render_soft_skill_multiselect("Soft Skills", key=f"f_soft_{vaga_id}")
+            with col_f2:
+                filtro_ben = render_benefit_multiselect("Benefícios Desejados", key=f"f_ben_{vaga_id}")
+            with col_f3:
+                salary_keys = catalog_keys(SALARY_RANGES)
+                filtro_salario = st.selectbox(
+                    "Faixa Salarial do Candidato",
+                    options=[None, *salary_keys],
+                    format_func=lambda key: "Qualquer" if key is None else catalog_label(SALARY_RANGES, key),
+                    key=f"f_sal_{vaga_id}"
+                )
+
+        if filtro_soft or filtro_ben or filtro_salario:
+            soft_keys_set = {_label_to_key(SOFT_SKILL_LABELS, s) for s in filtro_soft}
+            ben_keys_set = {_label_to_key(BENEFIT_LABELS, b) for b in filtro_ben}
+            
+            filtrados = []
+            for item in disponiveis:
+                cand_soft = set(item.get("soft_skills") or [])
+                cand_ben = set(item.get("beneficios") or [])
+                cand_salario = item.get("faixa_salarial")
+                
+                match_soft = soft_keys_set.issubset(cand_soft) if soft_keys_set else True
+                match_ben = ben_keys_set.issubset(cand_ben) if ben_keys_set else True
+                match_sal = (cand_salario == filtro_salario) if filtro_salario else True
+                
+                if match_soft and match_ben and match_sal:
+                    filtrados.append(item)
+            disponiveis = filtrados
+
+        st.markdown(f"#### Disponíveis para convite ({len(disponiveis)})")
+        if disponiveis:
+            for item in disponiveis:
+                _render_recommendation_card(item, vaga_id=vaga_id)
+        else:
+            st.warning("Nenhum candidato corresponde aos filtros avançados aplicados.")
     else:
         st.info("Nenhum candidato disponível para novo convite nesta vaga.")
 
@@ -158,6 +209,8 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
 
 
 def render_pending_tab(pending_invites: list[dict[str, Any]]) -> None:
+    st.info("**Proteção de Dados:** Os dados sensíveis (Nome, E-mail, Telefone e Foto) dos candidatos estão ocultos por padrão. Eles serão revelados de forma transparente assim que o candidato aceitar o convite.")
+    
     if not pending_invites:
         st.info("Nenhum convite aguardando resposta.")
         return
@@ -169,12 +222,11 @@ def render_pending_tab(pending_invites: list[dict[str, Any]]) -> None:
             render_job_description(invite)
             if invite.get("mensagem"):
                 st.write(invite["mensagem"])
-            st.caption("Os dados de contato ficam ocultos até o candidato aceitar o convite.")
 
 
 def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
+    st.success("**Perfil Revelado:** O candidato aceitou o convite. Você já pode visualizar os dados de contato e propor um horário para entrevista.")
     st.caption(
-        "Depois que o candidato aceita, você vê nome, e-mail e telefone. "
         "Proponha data, horário e link da reunião — a entrevista só fica confirmada "
         "quando os dois concordarem."
     )
@@ -194,8 +246,6 @@ def render_confirmed_tab(confirmed_invites: list[dict[str, Any]]) -> None:
                 st.success(badge)
             elif badge:
                 st.info(badge)
-            else:
-                st.success("Candidato aceitou o convite.")
 
             if invite.get("candidato_nome"):
                 st.markdown("#### Contato do candidato")

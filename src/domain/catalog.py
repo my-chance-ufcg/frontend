@@ -40,6 +40,48 @@ SKILLS = [
 SKILL_LABELS = {item["key"]: item["label"] for item in SKILLS}
 SKILL_OPTIONS = [item["label"] for item in SKILLS]
 
+SOFT_SKILLS = [
+    {"key": "comunicacao", "label": "Comunicação"},
+    {"key": "lideranca", "label": "Liderança"},
+    {"key": "resolucao_problemas", "label": "Resolução de Problemas"},
+    {"key": "trabalho_equipe", "label": "Trabalho em Equipe"},
+    {"key": "pensamento_critico", "label": "Pensamento Crítico"},
+    {"key": "adaptabilidade", "label": "Adaptabilidade"},
+    {"key": "gestao_tempo", "label": "Gestão de Tempo"},
+    {"key": "inteligencia_emocional", "label": "Inteligência Emocional"},
+    {"key": "proatividade", "label": "Proatividade"},
+    {"key": "criatividade", "label": "Criatividade"},
+]
+
+SOFT_SKILL_LABELS = {item["key"]: item["label"] for item in SOFT_SKILLS}
+SOFT_SKILL_OPTIONS = [item["label"] for item in SOFT_SKILLS]
+
+BENEFITS = [
+    {"key": "plano_saude", "label": "Plano de Saúde"},
+    {"key": "plano_odontologico", "label": "Plano Odontológico"},
+    {"key": "vale_alimentacao", "label": "Vale Alimentação (VA)"},
+    {"key": "vale_refeicao", "label": "Vale Refeição (VR)"},
+    {"key": "auxilio_home_office", "label": "Auxílio Home Office"},
+    {"key": "gympass", "label": "Gympass / TotalPass"},
+    {"key": "plr", "label": "PLR / Bônus"},
+    {"key": "seguro_vida", "label": "Seguro de Vida"},
+    {"key": "horario_flexivel", "label": "Horário Flexível"},
+    {"key": "day_off_aniversario", "label": "Day Off no Aniversário"},
+]
+
+BENEFIT_LABELS = {item["key"]: item["label"] for item in BENEFITS}
+BENEFIT_OPTIONS = [item["label"] for item in BENEFITS]
+
+SALARY_RANGES = [
+    {"key": "ate_2k", "label": "Até R$ 2.000"},
+    {"key": "2k_a_4k", "label": "R$ 2.001 a R$ 4.000"},
+    {"key": "4k_a_7k", "label": "R$ 4.001 a R$ 7.000"},
+    {"key": "7k_a_10k", "label": "R$ 7.001 a R$ 10.000"},
+    {"key": "10k_a_15k", "label": "R$ 10.001 a R$ 15.000"},
+    {"key": "acima_15k", "label": "Acima de R$ 15.000"},
+    {"key": "a_combinar", "label": "A Combinar"},
+]
+
 EDUCATION_LEVELS = [
     {"key": "ensino_medio_completo", "label": "Ensino Médio Completo"},
     {"key": "tecnico", "label": "Ensino Técnico"},

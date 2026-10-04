@@ -14,7 +14,7 @@ from src.views.recrutador.painel_vaga import (
 render_page_header(
     title="Vagas ativas",
     eyebrow="Área do recrutador",
-    subtitle="Selecione uma vaga para revisar candidatos sugeridos, convites pendentes e entrevistas confirmadas.",
+    subtitle="Selecione uma vaga para rever candidatos sugeridos, convites pendentes e entrevistas confirmadas no quadro Kanban.",
 )
 
 st.session_state.pop("job_save_feedback", None)
@@ -22,11 +22,11 @@ st.session_state.pop("job_save_feedback", None)
 try:
     jobs = list_my_jobs()
 except ApiError as error:
-    st.error(friendly_error(error, "Não foi possível carregar suas vagas."))
+    st.error(friendly_error(error, "Não foi possível carregar as suas vagas."))
     st.stop()
 
 if not jobs:
-    st.warning("Nenhuma vaga cadastrada. Publique uma em **Publicar vaga**.")
+    st.warning("Nenhuma vaga registada. Publique uma em **Publicar vaga**.")
     st.stop()
 
 vaga_id = render_job_selector(jobs)
@@ -34,7 +34,7 @@ if not vaga_id:
     st.stop()
 
 selected_job = next(job for job in jobs if job["vaga_id"] == vaga_id)
-st.caption(f"Gerenciando: **{selected_job['titulo']}**")
+st.caption(f"A gerir: **{selected_job['titulo']}**")
 
 try:
     recommendations = get_recommendations(vaga_id)
@@ -55,17 +55,20 @@ render_job_metrics(recommendations, pending_invites, confirmed_invites)
 st.write("---")
 
 if len(jobs) > 1:
-    st.info(f"Você possui **{len(jobs)} vagas ativas**. Use o seletor acima para alternar entre elas.")
+    st.info(f"Possui **{len(jobs)} vagas ativas**. Utilize o seletor acima para alternar entre elas.")
 
-aba_sugestoes, aba_pendentes, aba_confirmadas = st.tabs(
-    ["Candidatos sugeridos", "Aguardando resposta", "Entrevistas confirmadas"]
-)
+st.markdown("### Quadro de Acompanhamento")
 
-with aba_sugestoes:
+col_sugestoes, col_pendentes, col_confirmadas = st.columns(3, gap="large")
+
+with col_sugestoes:
+    st.markdown("#### Sugestões")
     render_suggestions_tab(vaga_id, recommendations)
 
-with aba_pendentes:
+with col_pendentes:
+    st.markdown("#### A Aguardar")
     render_pending_tab(pending_invites)
 
-with aba_confirmadas:
+with col_confirmadas:
+    st.markdown("#### Confirmadas")
     render_confirmed_tab(confirmed_invites)
