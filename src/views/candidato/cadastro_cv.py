@@ -475,10 +475,9 @@ if st.button(button_label, type="primary", use_container_width=True):
         st.error("Descreva ao menos um projeto de destaque.")
     else:
         
-        # Converte os labels de volta para chaves para mandar para a API
-        def _get_key_from_label(catalog: dict, target_label: str) -> str:
-            for k, v in catalog.items():
-                if v == target_label:
+        def _get_key_from_label(catalog, target_label: str) -> str:
+            for k in catalog_keys(catalog):
+                if catalog_label(catalog, k) == target_label:
                     return k
             return ""
 
