@@ -18,12 +18,19 @@ from src.domain.catalog import (
     STUDY_AREA_OUTRO,
     STUDY_AREAS,
     WORK_MODALITIES,
+    SALARY_RANGES,
+    SOFT_SKILLS,
+    BENEFITS,
     catalog_keys,
     catalog_label,
     format_month,
     label_to_skill_key,
 )
-from src.domain.skill_picker import render_skill_multiselect
+from src.domain.skill_picker import (
+    render_skill_multiselect,
+    render_soft_skill_multiselect,
+    render_benefit_multiselect
+)
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, create_profile, get_my_profile, update_profile
 from src.ui.layout import render_page_header
@@ -72,6 +79,13 @@ def _sync_profile_widget_state(profile: dict) -> None:
     st.session_state["cv_pretensao"] = max(1000, pretensao)
     projetos = profile.get("projetos_destaque") or []
     st.session_state["cv_projeto"] = projetos[0] if projetos else ""
+    st.session_state["cv_faixa_salarial"] = profile.get("faixa_salarial") or catalog_keys(SALARY_RANGES)[0]
+    st.session_state["cv_soft_skills"] = [
+        catalog_label(SOFT_SKILLS, k) for k in (profile.get("soft_skills") or []) if k in catalog_keys(SOFT_SKILLS)
+    ]
+    st.session_state["cv_beneficios"] = [
+        catalog_label(BENEFITS, k) for k in (profile.get("beneficios") or []) if k in catalog_keys(BENEFITS)
+    ]
 
     skill_labels = [
         SKILL_LABELS[key]
@@ -116,7 +130,6 @@ def _sync_profile_widget_state(profile: dict) -> None:
 
 
 def _init_profile_form() -> None:
-    # Recarrega da API sempre que o usuário navega de outra página para esta.
     if st.session_state.get("_active_page") != PAGE_ID:
         st.session_state._cv_initialized = False
     st.session_state._active_page = PAGE_ID
@@ -203,6 +216,15 @@ if skills_selecionadas:
                 value=int(st.session_state.get(f"skill_level_{skill_key}", 3)),
                 key=f"skill_level_{skill_key}",
             )
+
+st.write("---")
+
+st.subheader("1.5 Soft Skills")
+st.caption("Selecione as suas principais habilidades comportamentais.")
+soft_skills_selecionadas = render_soft_skill_multiselect(
+    "Habilidades comportamentais:",
+    key="cv_soft_skills",
+)
 
 st.write("---")
 
@@ -309,14 +331,23 @@ if st.button("➕ Adicionar outro idioma"):
 
 st.write("---")
 
-st.subheader("4. Pretensão Salarial")
-pretensao_minima = st.number_input(
-    "Valor mínimo mensal aceitável (R$)",
-    min_value=1000,
-    step=100,
-    help="Vagas com salário abaixo deste valor não serão sugeridas a você.",
-    key="cv_pretensao",
-)
+st.subheader("4. Faixa Salarial e Benefícios")
+col_salario, col_beneficios = st.columns([1, 2])
+
+with col_salario:
+    faixa_salarial = st.selectbox(
+        "Expectativa de Faixa Salarial",
+        options=catalog_keys(SALARY_RANGES),
+        format_func=lambda key: catalog_label(SALARY_RANGES, key),
+        help="Vagas fora dessa expectativa não serão sugeridas a você.",
+        key="cv_faixa_salarial",
+    )
+
+with col_beneficios:
+    beneficios_selecionados = render_benefit_multiselect(
+        "Benefícios desejados (opcional):",
+        key="cv_beneficios"
+    )
 
 st.write("---")
 
@@ -443,6 +474,17 @@ if st.button(button_label, type="primary", use_container_width=True):
     elif not str(projeto_destaque or "").strip():
         st.error("Descreva ao menos um projeto de destaque.")
     else:
+        
+        # Converte os labels de volta para chaves para mandar para a API
+        def _get_key_from_label(catalog: dict, target_label: str) -> str:
+            for k, v in catalog.items():
+                if v == target_label:
+                    return k
+            return ""
+
+        soft_skills_keys = [_get_key_from_label(SOFT_SKILLS, lbl) for lbl in (soft_skills_selecionadas or [])]
+        beneficios_keys = [_get_key_from_label(BENEFITS, lbl) for lbl in (beneficios_selecionados or [])]
+
         payload = {
             "competencias": competencias,
             "experiencias": experiencias,
@@ -450,10 +492,13 @@ if st.button(button_label, type="primary", use_container_width=True):
             "nivel_escolaridade": nivel_escolaridade,
             "estado": estado,
             "curso_area": curso_area,
-            "pretensao_salarial_minima": int(pretensao_minima),
+            "pretensao_salarial_minima": int(st.session_state.get("cv_pretensao", 3000)),
             "modalidades_preferidas": modalidades_preferidas,
             "vinculos_preferidos": vinculos_preferidos,
             "idiomas": idiomas,
+            "faixa_salarial": faixa_salarial,
+            "soft_skills": [k for k in soft_skills_keys if k],
+            "beneficios": [k for k in beneficios_keys if k],
         }
 
         try:
