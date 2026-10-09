@@ -144,9 +144,70 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
     disponiveis, recusados = _split_recommendations(recommendations)
 
     if disponiveis:
-        st.markdown("#### Disponíveis para convite")
+        with st.expander("Filtros Avançados"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                min_score = st.slider(
+                    "Compatibilidade mínima (%)", 
+                    min_value=0, 
+                    max_value=100, 
+                    value=0, 
+                    step=5,
+                    help="Exibe apenas candidatos com score igual ou superior."
+                )
+                
+                all_skills = sorted(list({
+                    skill for c in disponiveis for skill in c.get("competencias_tecnicas", [])
+                }))
+                selected_skills = st.multiselect(
+                    "Filtrar por competência específica", 
+                    options=all_skills,
+                    placeholder="Selecione uma ou mais..."
+                )
+
+            with col2:
+                from src.domain.catalog import SENIORITY_LEVELS, catalog_label, catalog_keys
+                
+                seniority_keys = catalog_keys(SENIORITY_LEVELS)
+                
+                selected_seniority = st.multiselect(
+                    "Filtrar por nível de senioridade",
+                    options=seniority_keys,
+                    format_func=lambda k: catalog_label(SENIORITY_LEVELS, k),
+                    help="O candidato deve possuir ao menos uma experiência no nível selecionado.",
+                    placeholder="Pleno, Sênior..."
+                )
+                
+        filtered_disponiveis = []
         for item in disponiveis:
+            score_pct = round(item["compatibilidade_score"] * 100, 1)
+            
+            if score_pct < min_score:
+                continue
+                
+            if selected_skills:
+                c_skills = item.get("competencias_tecnicas", [])
+                if not all(s in c_skills for s in selected_skills):
+                    continue
+                    
+            if selected_seniority:
+                c_exps = item.get("experiencias", [])
+                c_seniorities = [exp.get("senioridade") for exp in c_exps if exp.get("senioridade")]
+                # O candidato precisa ter pelo menos uma experiência com a senioridade exigida no filtro
+                if not any(s in c_seniorities for s in selected_seniority):
+                    continue
+                    
+            filtered_disponiveis.append(item)
+    else:
+        filtered_disponiveis = []
+
+    if filtered_disponiveis:
+        st.markdown(f"#### Disponíveis para convite ({len(filtered_disponiveis)})")
+        for item in filtered_disponiveis:
             _render_recommendation_card(item, vaga_id=vaga_id)
+    elif disponiveis:
+        st.warning("Nenhum candidato atende aos critérios dos filtros avançados. Tente ajustar a busca.")
     else:
         st.info("Nenhum candidato disponível para novo convite nesta vaga.")
 

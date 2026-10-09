@@ -423,7 +423,7 @@ if st.button(submit_label, type="primary", use_container_width=True):
                 st.session_state.vaga_id = job["vaga_id"]
                 st.session_state._job_form = job
                 st.session_state._job_loaded_id = editing_job_id
-                _sync_job_form_widget_state(editing_job_id, job)
+                #_sync_job_form_widget_state(editing_job_id, job)
                 st.session_state.job_save_feedback = {"kind": "updated"}
             else:
                 created = create_job(payload)
