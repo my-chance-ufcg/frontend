@@ -5,6 +5,8 @@ from typing import Any
 
 import streamlit as st
 
+import plotly.graph_objects as go
+
 from src.domain.catalog import SENIORITY_LEVELS, catalog_label
 from src.domain.invite_status import format_datetime_human, render_job_description, schedule_status_badge
 from src.domain.user_messages import friendly_error
@@ -80,6 +82,42 @@ def render_job_metrics(
             item for item in confirmed_invites if item.get("schedule_status") == "CONFIRMED"
         ]
         st.metric("Entrevistas confirmadas", len(fully_confirmed))
+
+    total_match = len(disponiveis) + len(recusados) + len(pending_invites) + len(confirmed_invites)
+    total_convites = len(pending_invites) + len(confirmed_invites) + len(recusados)
+    total_aceitos = len(confirmed_invites)
+    total_agendados = len(fully_confirmed)
+
+    if total_match > 0:
+        st.write("---")
+        
+        fig = go.Figure(go.Funnel(
+            y=["Sugeridos (Match)", "Convites Enviados", "Convites Aceitos", "Entrevistas Agendadas"],
+            x=[total_match, total_convites, total_aceitos, total_agendados],
+            textinfo="value+percent initial",
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Candidatos: %{x}<br>"
+                "%{percentInitial} do total inicial<br>"
+                "%{percentPrevious} da etapa anterior"
+                "<extra></extra>"
+            ),
+            marker={"color": ["#637085", "#225BFD", "#10B981", "#0f9f74"]} 
+        ))
+
+        fig.update_layout(
+            margin={"t": 40, "b": 20, "l": 20, "r": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=320,
+            title={
+                "text": "Pipeline de Conversão da Vaga", 
+                "x": 0.5, 
+                "font": {"color": "#202736", "size": 18, "family": "Plus Jakarta Sans"}
+            }
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def _split_recommendations(
