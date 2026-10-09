@@ -340,6 +340,7 @@ for exp_id in list(st.session_state.exp_ids):
                 max_chars=150,
                 key=f"cargo_outro_{exp_id}",
                 placeholder="Ex.: Analista de QA, Product Designer...",
+                help="Descreva apenas a função técnica, sem mencionar o nome da empresa para preservar seu anonimato."
             ).strip()
         else:
             cargo_valor = cargo_selecionado
@@ -415,6 +416,7 @@ projeto_destaque = st.text_area(
     max_chars=250,
     height=120,
     key="cv_projeto",
+    help="Lembre-se: não inclua links de portfólio (GitHub/LinkedIn) ou nomes de empresas onde trabalhou aqui. Foque apenas nos desafios técnicos e ferramentas utilizadas para manter seu perfil 100% anônimo."
 )
 
 st.write("---")

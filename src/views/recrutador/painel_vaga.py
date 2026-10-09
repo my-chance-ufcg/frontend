@@ -172,6 +172,12 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
         "não aparece aqui. Candidatos que recusaram permanecem listados apenas para referência."
     )
 
+    st.info(
+        "**Seleção sem vieses:** Os nomes e contatos reais são protegidos por padrão "
+        "para garantir um processo seletivo focado 100% em competências. Eles serão revelados "
+        "automaticamente nas próximas abas assim que o candidato aceitar o seu convite de entrevista."
+    )
+
     if not recommendations:
         st.info(
             "Nenhum candidato disponível para convite nesta vaga no momento. "
