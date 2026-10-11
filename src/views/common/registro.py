@@ -2,7 +2,8 @@ import streamlit as st
 
 from src.domain.contact_validation import is_valid_email, is_valid_phone, normalize_email, normalize_phone
 from src.domain.user_messages import friendly_error
-from src.services.api_client import ApiError, register as api_register
+from src.services.api_client import ApiError
+from src.services.identity_provider import register_account
 from src.services.auth_session import apply_auth_session
 from src.ui.layout import render_auth_form_header, render_auth_shell_start
 
@@ -67,7 +68,7 @@ with col_form:
                     if telefone_normalizado:
                         payload["telefone"] = telefone_normalizado
 
-                    auth_response = api_register(payload)
+                    auth_response = register_account(payload)
                     apply_auth_session(auth_response)
                     st.success(f"Conta criada com sucesso, {nome.split()[0]}!")
                     st.rerun()

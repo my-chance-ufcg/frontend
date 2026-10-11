@@ -46,6 +46,18 @@ def register(payload: dict[str, Any]) -> dict[str, Any]:
     return _handle_response(response)
 
 
+def idp_login(id_token: str, profile: dict[str, Any] | None = None) -> dict[str, Any]:
+    body: dict[str, Any] = {"id_token": id_token}
+    if profile:
+        body.update(profile)
+    response = requests.post(
+        f"{API_BASE_URL}/api/v1/auth/idp",
+        json=body,
+        timeout=20,
+    )
+    return _handle_response(response)
+
+
 def login(payload: dict[str, Any]) -> dict[str, Any]:
     response = requests.post(
         f"{API_BASE_URL}/api/v1/auth/login",

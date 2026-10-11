@@ -1,7 +1,8 @@
 import streamlit as st
 
 from src.domain.user_messages import friendly_error
-from src.services.api_client import ApiError, login as api_login
+from src.services.api_client import ApiError
+from src.services.identity_provider import login_account
 from src.services.auth_session import apply_auth_session
 from src.ui.layout import render_auth_form_header, render_auth_shell_start
 
@@ -23,7 +24,7 @@ with col_form:
             if st.button("Entrar", key="btn_cand", type="primary", use_container_width=True):
                 if email_cand and senha_cand:
                     try:
-                        apply_auth_session(api_login({"email": email_cand.strip(), "senha": senha_cand}))
+                        apply_auth_session(login_account(email_cand.strip(), senha_cand))
                         if st.session_state.user_role not in ("Candidato", "Administrador"):
                             from src.services.auth_session import clear_auth_session
 
@@ -43,7 +44,7 @@ with col_form:
             if st.button("Entrar", key="btn_rec", type="primary", use_container_width=True):
                 if email_rec and senha_rec:
                     try:
-                        apply_auth_session(api_login({"email": email_rec.strip(), "senha": senha_rec}))
+                        apply_auth_session(login_account(email_rec.strip(), senha_rec))
                         if st.session_state.user_role != "Recrutador":
                             from src.services.auth_session import clear_auth_session
 
