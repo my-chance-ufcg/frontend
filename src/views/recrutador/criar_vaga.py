@@ -86,6 +86,8 @@ def _sync_job_form_widget_state(form_scope: str, job_form: dict) -> None:
     st.session_state[f"job_salario_{form_scope}"] = int(job_form.get("salario_maximo") or 8000)
     _sync_requirement_widget_state(form_scope, job_form)
     _sync_language_widget_state(form_scope, job_form)
+    st.session_state[f"job_soft_skills_{form_scope}"] = job_form.get("soft_skills") or []
+    st.session_state[f"job_beneficios_{form_scope}"] = job_form.get("beneficios") or []
 
 
 def _load_job_into_session(job_id: str) -> None:
@@ -352,22 +354,81 @@ with col_senioridade:
 st.write("---")
 
 st.subheader("2. Orçamento salarial")
+
+# Chaves e limite
+slider_key = f"job_salario_slider_{form_scope}"
+min_key = f"job_salario_min_{form_scope}"
+max_key = f"job_salario_{form_scope}"
+SLIDER_MAX_LIMIT = 50000
+
+# Inicializa o slider
+if slider_key not in st.session_state:
+    st.session_state[slider_key] = (
+        min(st.session_state.get(min_key, 0), SLIDER_MAX_LIMIT),
+        min(st.session_state.get(max_key, 8000), SLIDER_MAX_LIMIT)
+    )
+
+def _sync_slider():
+    val = st.session_state[slider_key]
+    
+    if val[0] < SLIDER_MAX_LIMIT or st.session_state.get(min_key, 0) <= SLIDER_MAX_LIMIT:
+        st.session_state[min_key] = val[0]
+        
+    if val[1] < SLIDER_MAX_LIMIT or st.session_state.get(max_key, 0) <= SLIDER_MAX_LIMIT:
+        st.session_state[max_key] = val[1]
+
+def _sync_inputs():
+    min_val = st.session_state.get(min_key, 0)
+    max_val = st.session_state.get(max_key, 8000)
+    
+    # Trava visual para o slider
+    slider_min = min(min_val, SLIDER_MAX_LIMIT)
+    slider_max = min(max_val, SLIDER_MAX_LIMIT)
+    if slider_min > slider_max:
+        slider_min = slider_max 
+        
+    st.session_state[slider_key] = (slider_min, slider_max)
+
+st.caption("Arraste o controle deslizante ou digite os valores exatos nos campos abaixo.")
+
+current_min = st.session_state.get(min_key, 0)
+current_max = st.session_state.get(max_key, 8000)
+slider_label = "Faixa Salarial Estimada"
+
+if current_min > SLIDER_MAX_LIMIT and current_max > SLIDER_MAX_LIMIT:
+    slider_label += f"(R\$ {current_min:,} - R\$ {current_max:,})".replace(",", ".")
+elif current_max > SLIDER_MAX_LIMIT:
+    slider_label += f"(Máximo real: R$ {current_max:,})".replace(",", ".")
+
+# Slider de faixa salarial
+st.slider(
+    slider_label,
+    min_value=0,
+    max_value=SLIDER_MAX_LIMIT,
+    step=500,
+    format="R$ %d",
+    key=slider_key,
+    on_change=_sync_slider
+)
+
 col_min, col_max = st.columns(2)
 with col_min:
     salario_minimo_raw = st.number_input(
         "Salário mínimo mensal (R$) — opcional",
         min_value=0,
-        step=100,
+        step=500,
         help="Deixe 0 se não houver salário mínimo definido.",
-        key=f"job_salario_min_{form_scope}",
+        key=min_key,
+        on_change=_sync_inputs
     )
 with col_max:
     salario_maximo = st.number_input(
         "Salário máximo mensal oferecido (R$)",
         min_value=1,
-        step=100,
+        step=500,
         help="Candidatos com pretensão acima deste valor não serão sugeridos para a vaga.",
-        key=f"job_salario_{form_scope}",
+        key=max_key,
+        on_change=_sync_inputs
     )
 
 st.write("---")
@@ -384,6 +445,48 @@ st.caption(
     "As desejáveis ajudam a priorizar candidatos, mas não são eliminatórias."
 )
 requisitos = _render_requirement_fields(job_form, form_scope)
+
+st.write("---")
+
+st.subheader("5. Soft Skills (Competências Comportamentais)")
+st.caption("Selecione as habilidades comportamentais desejadas para o perfil do candidato.")
+
+# Lista de soft skills
+COMMON_SOFT_SKILLS = [
+    "Comunicação", "Trabalho em equipe", "Liderança", "Proatividade",
+    "Resolução de problemas", "Pensamento crítico", "Adaptabilidade",
+    "Resiliência", "Gestão de tempo", "Inteligência emocional",
+    "Negociação", "Criatividade", "Organização", "Flexibilidade"
+]
+
+soft_skills_selecionadas = st.multiselect(
+    "Competências comportamentais",
+    options=COMMON_SOFT_SKILLS,
+    default=st.session_state.get(f"job_soft_skills_{form_scope}", []),
+    key=f"job_soft_skills_{form_scope}",
+    placeholder="Selecione uma ou mais..."
+)
+
+st.write("---")
+
+st.subheader("6. Benefícios")
+st.caption("Selecione os benefícios e auxílios oferecidos pela empresa.")
+
+COMMON_BENEFITS = [
+    "Vale Refeição (VR)", "Vale Alimentação (VA)", "Vale Transporte (VT)",
+    "Plano de Saúde", "Plano Odontológico", "Seguro de Vida",
+    "Auxílio Home Office", "Gympass / TotalPass", "Bolsa de Estudos / Cursos",
+    "Participação nos Lucros (PLR / PPR)", "Horário Flexível", "Day Off no Aniversário",
+    "Previdência Privada", "Auxílio Creche"
+]
+
+beneficios_selecionados = st.multiselect(
+    "Benefícios oferecidos",
+    options=COMMON_BENEFITS,
+    default=st.session_state.get(f"job_beneficios_{form_scope}", []),
+    key=f"job_beneficios_{form_scope}",
+    placeholder="Selecione um ou mais..."
+)
 
 st.write("---")
 
@@ -414,6 +517,8 @@ if st.button(submit_label, type="primary", use_container_width=True):
             "salario_maximo": int(salario_maximo),
             "requisitos": requisitos,
             "idiomas": idiomas,
+            "soft_skills": soft_skills_selecionadas,
+            "beneficios": beneficios_selecionados,
         }
 
         try:
