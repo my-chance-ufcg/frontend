@@ -1,4 +1,7 @@
+import pandas as pd
 import streamlit as st
+
+from src.domain.user_messages import friendly_error
 
 from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, get_recommendations, list_job_invites, list_my_jobs
@@ -29,6 +32,46 @@ if not jobs:
     st.warning("Nenhuma vaga cadastrada. Publique uma em **Publicar vaga**.")
     st.stop()
 
+st.subheader("Visão Geral das Vagas")
+st.caption("Acompanhe o funil de todas as suas vagas ativas de forma consolidada.")
+
+with st.spinner("Carregando panorama de processos seletivos..."):
+    resumo_dados = []
+    for job in jobs:
+        job_id = job["vaga_id"]
+        
+        # Busca convites da vaga
+        try:
+            invites = list_job_invites(job_id)
+            pending = len([i for i in invites if i["status"] == "ENVIADO"])
+            confirmed = len([i for i in invites if i["status"] == "ACEITO" and i.get("schedule_status") == "CONFIRMED"])
+        except ApiError:
+            pending, confirmed = 0, 0
+            
+        # Busca recomendações da vaga
+        try:
+            recs = get_recommendations(job_id)
+            matches = len([r for r in recs if r.get("convite_status") != "RECUSADO"])
+        except ApiError:
+            matches = 0
+            
+        resumo_dados.append({
+            "Vaga": job["titulo"],
+            "Candidatos Compatíveis": matches,
+            "Aguardando Resposta": pending,
+            "Entrevistas Marcadas": confirmed
+        })
+
+    if resumo_dados:
+        df_resumo = pd.DataFrame(resumo_dados)
+        st.dataframe(
+            df_resumo, 
+            use_container_width=True,
+            hide_index=True
+        )
+st.write("---")
+
+st.subheader("Painel da Vaga")
 vaga_id = render_job_selector(jobs)
 if not vaga_id:
     st.stop()
