@@ -5,6 +5,8 @@ from typing import Any
 
 import streamlit as st
 
+import plotly.graph_objects as go
+
 from src.domain.catalog import SENIORITY_LEVELS, catalog_label
 from src.domain.invite_status import format_datetime_human, render_job_description, schedule_status_badge
 from src.domain.user_messages import friendly_error
@@ -81,6 +83,42 @@ def render_job_metrics(
         ]
         st.metric("Entrevistas confirmadas", len(fully_confirmed))
 
+    total_match = len(disponiveis) + len(recusados) + len(pending_invites) + len(confirmed_invites)
+    total_convites = len(pending_invites) + len(confirmed_invites) + len(recusados)
+    total_aceitos = len(confirmed_invites)
+    total_agendados = len(fully_confirmed)
+
+    if total_match > 0:
+        st.write("---")
+        
+        fig = go.Figure(go.Funnel(
+            y=["Sugeridos (Match)", "Convites Enviados", "Convites Aceitos", "Entrevistas Agendadas"],
+            x=[total_match, total_convites, total_aceitos, total_agendados],
+            textinfo="value+percent initial",
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Candidatos: %{x}<br>"
+                "%{percentInitial} do total inicial<br>"
+                "%{percentPrevious} da etapa anterior"
+                "<extra></extra>"
+            ),
+            marker={"color": ["#637085", "#225BFD", "#10B981", "#0f9f74"]} 
+        ))
+
+        fig.update_layout(
+            margin={"t": 40, "b": 20, "l": 20, "r": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=320,
+            title={
+                "text": "Pipeline de Conversão da Vaga", 
+                "x": 0.5, 
+                "font": {"color": "#202736", "size": 18, "family": "Plus Jakarta Sans"}
+            }
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
 
 def _split_recommendations(
     recommendations: list[dict[str, Any]],
@@ -134,6 +172,12 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
         "não aparece aqui. Candidatos que recusaram permanecem listados apenas para referência."
     )
 
+    st.info(
+        "**Seleção sem vieses:** Os nomes e contatos reais são protegidos por padrão "
+        "para garantir um processo seletivo focado 100% em competências. Eles serão revelados "
+        "automaticamente nas próximas abas assim que o candidato aceitar o seu convite de entrevista."
+    )
+
     if not recommendations:
         st.info(
             "Nenhum candidato disponível para convite nesta vaga no momento. "
@@ -144,9 +188,70 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
     disponiveis, recusados = _split_recommendations(recommendations)
 
     if disponiveis:
-        st.markdown("#### Disponíveis para convite")
+        with st.expander("Filtros Avançados"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                min_score = st.slider(
+                    "Compatibilidade mínima (%)", 
+                    min_value=0, 
+                    max_value=100, 
+                    value=0, 
+                    step=5,
+                    help="Exibe apenas candidatos com score igual ou superior."
+                )
+                
+                all_skills = sorted(list({
+                    skill for c in disponiveis for skill in c.get("competencias_tecnicas", [])
+                }))
+                selected_skills = st.multiselect(
+                    "Filtrar por competência específica", 
+                    options=all_skills,
+                    placeholder="Selecione uma ou mais..."
+                )
+
+            with col2:
+                from src.domain.catalog import SENIORITY_LEVELS, catalog_label, catalog_keys
+                
+                seniority_keys = catalog_keys(SENIORITY_LEVELS)
+                
+                selected_seniority = st.multiselect(
+                    "Filtrar por nível de senioridade",
+                    options=seniority_keys,
+                    format_func=lambda k: catalog_label(SENIORITY_LEVELS, k),
+                    help="O candidato deve possuir ao menos uma experiência no nível selecionado.",
+                    placeholder="Pleno, Sênior..."
+                )
+                
+        filtered_disponiveis = []
         for item in disponiveis:
+            score_pct = round(item["compatibilidade_score"] * 100, 1)
+            
+            if score_pct < min_score:
+                continue
+                
+            if selected_skills:
+                c_skills = item.get("competencias_tecnicas", [])
+                if not all(s in c_skills for s in selected_skills):
+                    continue
+                    
+            if selected_seniority:
+                c_exps = item.get("experiencias", [])
+                c_seniorities = [exp.get("senioridade") for exp in c_exps if exp.get("senioridade")]
+                # O candidato precisa ter pelo menos uma experiência com a senioridade exigida no filtro
+                if not any(s in c_seniorities for s in selected_seniority):
+                    continue
+                    
+            filtered_disponiveis.append(item)
+    else:
+        filtered_disponiveis = []
+
+    if filtered_disponiveis:
+        st.markdown(f"#### Disponíveis para convite ({len(filtered_disponiveis)})")
+        for item in filtered_disponiveis:
             _render_recommendation_card(item, vaga_id=vaga_id)
+    elif disponiveis:
+        st.warning("Nenhum candidato atende aos critérios dos filtros avançados. Tente ajustar a busca.")
     else:
         st.info("Nenhum candidato disponível para novo convite nesta vaga.")
 
