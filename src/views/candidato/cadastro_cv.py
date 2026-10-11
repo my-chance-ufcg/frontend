@@ -68,6 +68,7 @@ def _sync_profile_widget_state(profile: dict) -> None:
     st.session_state["cv_vinculos"] = [
         key for key in (profile.get("vinculos_preferidos") or []) if key in catalog_keys(EMPLOYMENT_TYPES)
     ]
+    st.session_state["cv_beneficios"] = profile.get("beneficios") or []
     pretensao = int(profile.get("pretensao_salarial_minima") or 3000)
     st.session_state["cv_pretensao"] = max(1000, pretensao)
     projetos = profile.get("projetos_destaque") or []
@@ -79,6 +80,8 @@ def _sync_profile_widget_state(profile: dict) -> None:
         if key in SKILL_LABELS
     ]
     st.session_state["cv_skills"] = skill_labels
+    st.session_state["cv_soft_skills"] = profile.get("soft_skills") or []
+
     for skill_key, level in (profile.get("competencias") or {}).items():
         st.session_state[f"skill_level_{skill_key}"] = level
 
@@ -206,7 +209,27 @@ if skills_selecionadas:
 
 st.write("---")
 
-st.subheader("2. Informações gerais")
+st.subheader("2. Competências Comportamentais (Soft Skills)")
+st.caption("Selecione as habilidades comportamentais que melhor descrevem seu perfil profissional.")
+
+COMMON_SOFT_SKILLS = [
+    "Comunicação", "Trabalho em equipe", "Liderança", "Proatividade",
+    "Resolução de problemas", "Pensamento crítico", "Adaptabilidade",
+    "Resiliência", "Gestão de tempo", "Inteligência emocional",
+    "Negociação", "Criatividade", "Organização", "Flexibilidade"
+]
+
+soft_skills_selecionadas = st.multiselect(
+    "Soft Skills",
+    options=COMMON_SOFT_SKILLS,
+    default=st.session_state.get("cv_soft_skills", []),
+    key="cv_soft_skills",
+    placeholder="Selecione uma ou mais..."
+)
+
+st.write("---")
+
+st.subheader("3. Informações gerais")
 education_keys = catalog_keys(EDUCATION_LEVELS)
 state_keys = catalog_keys(STATES)
 modality_keys = catalog_keys(WORK_MODALITIES)
@@ -273,9 +296,25 @@ vinculos_preferidos = st.multiselect(
     key="cv_vinculos",
 )
 
+COMMON_BENEFITS = [
+    "Vale Refeição (VR)", "Vale Alimentação (VA)", "Vale Transporte (VT)",
+    "Plano de Saúde", "Plano Odontológico", "Seguro de Vida",
+    "Auxílio Home Office", "Gympass / TotalPass", "Bolsa de Estudos / Cursos",
+    "Participação nos Lucros (PLR / PPR)", "Horário Flexível", "Day Off no Aniversário",
+    "Previdência Privada", "Auxílio Creche"
+]
+
+beneficios_desejados = st.multiselect(
+    "Benefícios desejados (opcional)",
+    options=COMMON_BENEFITS,
+    default=st.session_state.get("cv_beneficios", []),
+    key="cv_beneficios",
+    placeholder="Selecione os benefícios que você mais valoriza..."
+)
+
 st.write("---")
 
-st.subheader("3. Idiomas")
+st.subheader("4. Idiomas")
 st.caption("Informe ao menos um idioma e o nível correspondente.")
 
 idiomas: list[dict[str, str]] = []
@@ -302,14 +341,14 @@ for lang_id in list(st.session_state.lang_ids):
             )
         idiomas.append({"idioma": idioma, "nivel": nivel})
 
-if st.button("➕ Adicionar outro idioma"):
+if st.button("Adicionar outro idioma"):
     st.session_state.lang_ids.append(st.session_state.next_lang_id)
     st.session_state.next_lang_id += 1
     st.rerun()
 
 st.write("---")
 
-st.subheader("4. Pretensão Salarial")
+st.subheader("5. Pretensão Salarial")
 pretensao_minima = st.number_input(
     "Valor mínimo mensal aceitável (R$)",
     min_value=1000,
@@ -320,7 +359,7 @@ pretensao_minima = st.number_input(
 
 st.write("---")
 
-st.subheader("5. Histórico de Experiências")
+st.subheader("6. Histórico de Experiências")
 
 experiencias: list[dict] = []
 for exp_id in list(st.session_state.exp_ids):
@@ -410,7 +449,7 @@ if st.button("➕ Adicionar outra experiência"):
 
 st.write("---")
 
-st.subheader("6. Projetos de Destaque")
+st.subheader("7. Projetos de Destaque")
 projeto_destaque = st.text_area(
     "Descreva um projeto significativo (máx. 250 caracteres, foco em tecnologias):",
     max_chars=250,
@@ -447,6 +486,7 @@ if st.button(button_label, type="primary", use_container_width=True):
     else:
         payload = {
             "competencias": competencias,
+            "soft_skills": soft_skills_selecionadas,
             "experiencias": experiencias,
             "projetos_destaque": [str(projeto_destaque).strip()],
             "nivel_escolaridade": nivel_escolaridade,
@@ -456,6 +496,7 @@ if st.button(button_label, type="primary", use_container_width=True):
             "modalidades_preferidas": modalidades_preferidas,
             "vinculos_preferidos": vinculos_preferidos,
             "idiomas": idiomas,
+            "beneficios": beneficios_desejados,
         }
 
         try:
