@@ -40,6 +40,30 @@ SKILLS = [
 SKILL_LABELS = {item["key"]: item["label"] for item in SKILLS}
 SKILL_OPTIONS = [item["label"] for item in SKILLS]
 
+SOFT_SKILL_OPTIONS = [
+    "Comunicação",
+    "Escuta ativa",
+    "Trabalho em equipe",
+    "Liderança",
+    "Proatividade",
+    "Autonomia",
+    "Resolução de problemas",
+    "Pensamento crítico",
+    "Tomada de decisão",
+    "Adaptabilidade",
+    "Resiliência",
+    "Gestão de tempo",
+    "Organização",
+    "Inteligência emocional",
+    "Empatia",
+    "Negociação",
+    "Criatividade",
+    "Flexibilidade",
+    "Orientação a resultados",
+    "Aprendizado contínuo",
+]
+SOFT_SKILL_LIMIT = 3
+
 EDUCATION_LEVELS = [
     {"key": "ensino_medio_completo", "label": "Ensino Médio Completo"},
     {"key": "tecnico", "label": "Ensino Técnico"},

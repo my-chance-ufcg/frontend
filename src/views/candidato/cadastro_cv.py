@@ -14,6 +14,8 @@ from src.domain.catalog import (
     ROLE_TITLES,
     SENIORITY_LEVELS,
     SKILL_LABELS,
+    SOFT_SKILL_LIMIT,
+    SOFT_SKILL_OPTIONS,
     STATES,
     STUDY_AREA_OUTRO,
     STUDY_AREAS,
@@ -183,14 +185,14 @@ st.warning(
 
 st.write("---")
 
-st.subheader("1. Competências")
+st.subheader("1. Competências técnicas")
 st.caption(
-    "Selecione suas competências e informe seu nível (0 = sem domínio, 5 = especialista). "
+    "Selecione suas competências técnicas e informe seu nível (0 = sem domínio, 5 = especialista). "
     "Digite no campo para encontrar uma tecnologia."
 )
 
 skills_selecionadas = render_skill_multiselect(
-    "Competências:",
+    "Competências técnicas",
     key="cv_skills",
 )
 
@@ -209,22 +211,18 @@ if skills_selecionadas:
 
 st.write("---")
 
-st.subheader("2. Competências Comportamentais (Soft Skills)")
-st.caption("Selecione as habilidades comportamentais que melhor descrevem seu perfil profissional.")
-
-COMMON_SOFT_SKILLS = [
-    "Comunicação", "Trabalho em equipe", "Liderança", "Proatividade",
-    "Resolução de problemas", "Pensamento crítico", "Adaptabilidade",
-    "Resiliência", "Gestão de tempo", "Inteligência emocional",
-    "Negociação", "Criatividade", "Organização", "Flexibilidade"
-]
+st.subheader("2. Competências comportamentais")
+st.caption("Escolha até 3 habilidades que melhor descrevem como você trabalha.")
 
 soft_skills_selecionadas = st.multiselect(
-    "Soft Skills",
-    options=COMMON_SOFT_SKILLS,
-    default=st.session_state.get("cv_soft_skills", []),
+    "Competências comportamentais",
+    options=SOFT_SKILL_OPTIONS,
+    default=[
+        skill for skill in st.session_state.get("cv_soft_skills", []) if skill in SOFT_SKILL_OPTIONS
+    ][:SOFT_SKILL_LIMIT],
+    max_selections=SOFT_SKILL_LIMIT,
     key="cv_soft_skills",
-    placeholder="Selecione uma ou mais..."
+    placeholder="Escolha até 3...",
 )
 
 st.write("---")
@@ -468,7 +466,7 @@ if st.button(button_label, type="primary", use_container_width=True):
         for exp_id in st.session_state.exp_ids
     )
     if not competencias:
-        st.error("Selecione ao menos uma competência com nível informado.")
+        st.error("Selecione ao menos uma competência técnica com nível informado.")
     elif curso_selecionado == STUDY_AREA_OUTRO and not curso_area:
         st.error("Descreva a área de formação ou escolha outra opção.")
     elif not modalidades_preferidas:

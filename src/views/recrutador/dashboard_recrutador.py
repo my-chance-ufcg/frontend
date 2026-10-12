@@ -2,8 +2,6 @@ import pandas as pd
 import streamlit as st
 
 from src.domain.user_messages import friendly_error
-
-from src.domain.user_messages import friendly_error
 from src.services.api_client import ApiError, get_recommendations, list_job_invites, list_my_jobs
 from src.ui.layout import render_page_header
 from src.views.recrutador.painel_vaga import (
@@ -32,46 +30,6 @@ if not jobs:
     st.warning("Nenhuma vaga cadastrada. Publique uma em **Publicar vaga**.")
     st.stop()
 
-st.subheader("Visão Geral das Vagas")
-st.caption("Acompanhe o funil de todas as suas vagas ativas de forma consolidada.")
-
-with st.spinner("Carregando panorama de processos seletivos..."):
-    resumo_dados = []
-    for job in jobs:
-        job_id = job["vaga_id"]
-        
-        # Busca convites da vaga
-        try:
-            invites = list_job_invites(job_id)
-            pending = len([i for i in invites if i["status"] == "ENVIADO"])
-            confirmed = len([i for i in invites if i["status"] == "ACEITO" and i.get("schedule_status") == "CONFIRMED"])
-        except ApiError:
-            pending, confirmed = 0, 0
-            
-        # Busca recomendações da vaga
-        try:
-            recs = get_recommendations(job_id)
-            matches = len([r for r in recs if r.get("convite_status") != "RECUSADO"])
-        except ApiError:
-            matches = 0
-            
-        resumo_dados.append({
-            "Vaga": job["titulo"],
-            "Candidatos Compatíveis": matches,
-            "Aguardando Resposta": pending,
-            "Entrevistas Marcadas": confirmed
-        })
-
-    if resumo_dados:
-        df_resumo = pd.DataFrame(resumo_dados)
-        st.dataframe(
-            df_resumo, 
-            use_container_width=True,
-            hide_index=True
-        )
-st.write("---")
-
-st.subheader("Painel da Vaga")
 vaga_id = render_job_selector(jobs)
 if not vaga_id:
     st.stop()
@@ -94,14 +52,8 @@ except ApiError as error:
 pending_invites = [item for item in invites if item["status"] == "ENVIADO"]
 confirmed_invites = [item for item in invites if item["status"] == "ACEITO"]
 
-render_job_metrics(recommendations, pending_invites, confirmed_invites)
-st.write("---")
-
-if len(jobs) > 1:
-    st.info(f"Você possui **{len(jobs)} vagas ativas**. Use o seletor acima para alternar entre elas.")
-
-aba_sugestoes, aba_pendentes, aba_confirmadas = st.tabs(
-    ["Candidatos sugeridos", "Aguardando resposta", "Entrevistas confirmadas"]
+aba_sugestoes, aba_pendentes, aba_confirmadas, aba_estatisticas = st.tabs(
+    ["Candidatos sugeridos", "Aguardando resposta", "Entrevistas confirmadas", "Estatísticas"]
 )
 
 with aba_sugestoes:
@@ -112,3 +64,43 @@ with aba_pendentes:
 
 with aba_confirmadas:
     render_confirmed_tab(confirmed_invites)
+
+with aba_estatisticas:
+    st.subheader(selected_job["titulo"])
+    st.caption("Funil desta vaga, do match até a entrevista marcada.")
+    render_job_metrics(recommendations, pending_invites, confirmed_invites)
+    if len(jobs) > 1:
+        st.write("---")
+        st.subheader("Demais vagas")
+        st.caption("Comparação rápida das vagas ativas.")
+        with st.spinner("Carregando panorama das vagas..."):
+            resumo_dados = []
+            for job in jobs:
+                if job["vaga_id"] == vaga_id:
+                    matches = len([item for item in recommendations if item.get("convite_status") != "RECUSADO"])
+                    pending = len(pending_invites)
+                    confirmed = len([
+                        item for item in confirmed_invites if item.get("schedule_status") == "CONFIRMED"
+                    ])
+                else:
+                    try:
+                        other_invites = list_job_invites(job["vaga_id"])
+                        pending = len([item for item in other_invites if item["status"] == "ENVIADO"])
+                        confirmed = len([
+                            item for item in other_invites
+                            if item["status"] == "ACEITO" and item.get("schedule_status") == "CONFIRMED"
+                        ])
+                    except ApiError:
+                        pending, confirmed = 0, 0
+                    try:
+                        other_recs = get_recommendations(job["vaga_id"])
+                        matches = len([item for item in other_recs if item.get("convite_status") != "RECUSADO"])
+                    except ApiError:
+                        matches = 0
+                resumo_dados.append({
+                    "Vaga": job["titulo"],
+                    "Candidatos compatíveis": matches,
+                    "Aguardando resposta": pending,
+                    "Entrevistas marcadas": confirmed,
+                })
+            st.dataframe(pd.DataFrame(resumo_dados), use_container_width=True, hide_index=True)

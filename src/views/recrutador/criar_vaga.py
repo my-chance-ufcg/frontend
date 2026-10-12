@@ -7,6 +7,8 @@ from src.domain.catalog import (
     LANGUAGE_LEVELS,
     LANGUAGES,
     SENIORITY_LEVELS,
+    SOFT_SKILL_LIMIT,
+    SOFT_SKILL_OPTIONS,
     STATES,
     WORK_MODALITIES,
     catalog_keys,
@@ -82,8 +84,14 @@ def _sync_job_form_widget_state(form_scope: str, job_form: dict) -> None:
     local = job_form.get("local")
     st.session_state[f"job_local_{form_scope}"] = local if local in catalog_keys(STATES) else None
     st.session_state[f"job_senioridade_{form_scope}"] = job_form.get("senioridade") or "pleno"
-    st.session_state[f"job_salario_min_{form_scope}"] = int(job_form.get("salario_minimo") or 0)
-    st.session_state[f"job_salario_{form_scope}"] = int(job_form.get("salario_maximo") or 8000)
+    salario_minimo = int(job_form.get("salario_minimo") or 0)
+    salario_maximo = int(job_form.get("salario_maximo") or 8000)
+    st.session_state[f"job_salario_min_{form_scope}"] = salario_minimo
+    st.session_state[f"job_salario_{form_scope}"] = salario_maximo
+    st.session_state[f"job_salario_slider_{form_scope}"] = (
+        min(salario_minimo, 50000),
+        min(salario_maximo, 50000),
+    )
     _sync_requirement_widget_state(form_scope, job_form)
     _sync_language_widget_state(form_scope, job_form)
     st.session_state[f"job_soft_skills_{form_scope}"] = job_form.get("soft_skills") or []
@@ -113,12 +121,12 @@ def _render_requirement_fields(job_form: dict | None, form_scope: str) -> list[d
     default_des = [SKILL_LABELS[req["competencia"]] for req in desejaveis if req["competencia"] in SKILL_LABELS]
 
     skills_obrigatorias = render_skill_multiselect(
-        "Competências Obrigatórias",
+        "Competências técnicas obrigatórias",
         key=f"job_skills_required_{form_scope}",
         default=default_obr,
     )
     skills_desejaveis = render_skill_multiselect(
-        "Competências Desejáveis",
+        "Competências técnicas desejáveis",
         key=f"job_skills_desired_{form_scope}",
         default=[skill for skill in default_des if skill not in skills_obrigatorias],
         exclude_labels=skills_obrigatorias,
@@ -439,32 +447,29 @@ idiomas = _render_language_fields(form_scope)
 
 st.write("---")
 
-st.subheader("4. Competências exigidas")
+st.subheader("4. Competências técnicas")
 st.caption(
-    "Marque as competências obrigatórias e informe o nível mínimo esperado. "
+    "Marque as competências técnicas obrigatórias e informe o nível mínimo esperado. "
     "As desejáveis ajudam a priorizar candidatos, mas não são eliminatórias."
 )
 requisitos = _render_requirement_fields(job_form, form_scope)
 
 st.write("---")
 
-st.subheader("5. Soft Skills (Competências Comportamentais)")
-st.caption("Selecione as habilidades comportamentais desejadas para o perfil do candidato.")
-
-# Lista de soft skills
-COMMON_SOFT_SKILLS = [
-    "Comunicação", "Trabalho em equipe", "Liderança", "Proatividade",
-    "Resolução de problemas", "Pensamento crítico", "Adaptabilidade",
-    "Resiliência", "Gestão de tempo", "Inteligência emocional",
-    "Negociação", "Criatividade", "Organização", "Flexibilidade"
-]
+st.subheader("5. Competências comportamentais")
+st.caption("Escolha até 3 habilidades que você espera de quem for ocupar a vaga.")
 
 soft_skills_selecionadas = st.multiselect(
     "Competências comportamentais",
-    options=COMMON_SOFT_SKILLS,
-    default=st.session_state.get(f"job_soft_skills_{form_scope}", []),
+    options=SOFT_SKILL_OPTIONS,
+    default=[
+        skill
+        for skill in st.session_state.get(f"job_soft_skills_{form_scope}", [])
+        if skill in SOFT_SKILL_OPTIONS
+    ][:SOFT_SKILL_LIMIT],
+    max_selections=SOFT_SKILL_LIMIT,
     key=f"job_soft_skills_{form_scope}",
-    placeholder="Selecione uma ou mais..."
+    placeholder="Escolha até 3...",
 )
 
 st.write("---")
@@ -499,7 +504,7 @@ if st.button(submit_label, type="primary", use_container_width=True):
     elif modalidade == "presencial" and not local:
         st.error("Informe o estado para vagas presenciais.")
     elif not any(req["obrigatoria"] for req in requisitos):
-        st.error("Selecione ao menos uma competência obrigatória.")
+        st.error("Selecione ao menos uma competência técnica obrigatória.")
     elif salario_maximo <= 0:
         st.error("Informe um orçamento salarial válido.")
     elif salario_minimo_raw > 0 and salario_minimo_raw > salario_maximo:
@@ -528,7 +533,10 @@ if st.button(submit_label, type="primary", use_container_width=True):
                 st.session_state.vaga_id = job["vaga_id"]
                 st.session_state._job_form = job
                 st.session_state._job_loaded_id = editing_job_id
-                #_sync_job_form_widget_state(editing_job_id, job)
+                _sync_job_form_widget_state(editing_job_id, job)
+                for state_key in list(st.session_state.keys()):
+                    if str(state_key).startswith(f"filter_") and editing_job_id in str(state_key):
+                        del st.session_state[state_key]
                 st.session_state.job_save_feedback = {"kind": "updated"}
             else:
                 created = create_job(payload)

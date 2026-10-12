@@ -142,7 +142,16 @@ def _render_recommendation_card(
         if rejected:
             st.warning("Este candidato já recusou um convite para esta vaga.")
         st.markdown(f"**Compatibilidade:** {item['compatibilidade']} ({score_pct}%)")
-        st.markdown(f"**Competências:** {', '.join(item['competencias_tecnicas'])}")
+        explicacao = item.get("explicacao") or []
+        if explicacao:
+            st.markdown("**Por que este score**")
+            for motivo in explicacao:
+                st.caption(motivo)
+        st.markdown(f"**Competências técnicas:** {', '.join(item['competencias_tecnicas'])}")
+        if item.get("soft_skills"):
+            st.markdown(f"**Competências comportamentais:** {', '.join(item['soft_skills'])}")
+        if item.get("beneficios"):
+            st.markdown(f"**Benefícios desejados:** {', '.join(item['beneficios'])}")
 
         if item.get("experiencias"):
             exp_lines = [_format_experience_line(exp) for exp in item["experiencias"]]
@@ -193,21 +202,23 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
             
             with col1:
                 min_score = st.slider(
-                    "Compatibilidade mínima (%)", 
-                    min_value=0, 
-                    max_value=100, 
-                    value=0, 
+                    "Compatibilidade mínima (%)",
+                    min_value=0,
+                    max_value=100,
+                    value=0,
                     step=5,
-                    help="Exibe apenas candidatos com score igual ou superior."
+                    help="Exibe apenas candidatos com score igual ou superior.",
+                    key=f"filter_score_{vaga_id}",
                 )
-                
-                all_skills = sorted(list({
-                    skill for c in disponiveis for skill in c.get("competencias_tecnicas", [])
-                }))
+
+                all_skills = sorted({
+                    skill for candidate in disponiveis for skill in candidate.get("competencias_tecnicas", [])
+                })
                 selected_skills = st.multiselect(
-                    "Filtrar por competência específica", 
+                    "Filtrar por competência técnica",
                     options=all_skills,
-                    placeholder="Selecione uma ou mais..."
+                    placeholder="Selecione uma ou mais...",
+                    key=f"filter_skills_{vaga_id}_{'|'.join(all_skills)}",
                 )
 
             with col2:
@@ -220,8 +231,29 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
                     options=seniority_keys,
                     format_func=lambda k: catalog_label(SENIORITY_LEVELS, k),
                     help="O candidato deve possuir ao menos uma experiência no nível selecionado.",
-                    placeholder="Pleno, Sênior..."
+                    placeholder="Pleno, Sênior...",
+                    key=f"filter_seniority_{vaga_id}",
                 )
+
+                all_soft_skills = sorted({
+                    skill for candidate in disponiveis for skill in (candidate.get("soft_skills") or [])
+                })
+                selected_soft_skills = st.multiselect(
+                    "Filtrar por competência comportamental",
+                    options=all_soft_skills,
+                    placeholder="Comunicação, Trabalho em equipe...",
+                    key=f"filter_soft_{vaga_id}_{'|'.join(all_soft_skills)}",
+                )
+
+            all_benefits = sorted({
+                benefit for candidate in disponiveis for benefit in (candidate.get("beneficios") or [])
+            })
+            selected_benefits = st.multiselect(
+                "Filtrar por benefício desejado",
+                options=all_benefits,
+                placeholder="Plano de Saúde, Vale Refeição...",
+                key=f"filter_benefits_{vaga_id}_{'|'.join(all_benefits)}",
+            )
                 
         filtered_disponiveis = []
         for item in disponiveis:
@@ -240,6 +272,16 @@ def render_suggestions_tab(vaga_id: str, recommendations: list[dict[str, Any]]) 
                 c_seniorities = [exp.get("senioridade") for exp in c_exps if exp.get("senioridade")]
                 # O candidato precisa ter pelo menos uma experiência com a senioridade exigida no filtro
                 if not any(s in c_seniorities for s in selected_seniority):
+                    continue
+
+            if selected_soft_skills:
+                candidate_soft_skills = item.get("soft_skills") or []
+                if not all(skill in candidate_soft_skills for skill in selected_soft_skills):
+                    continue
+
+            if selected_benefits:
+                candidate_benefits = item.get("beneficios") or []
+                if not all(benefit in candidate_benefits for benefit in selected_benefits):
                     continue
                     
             filtered_disponiveis.append(item)
